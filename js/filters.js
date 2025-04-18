@@ -200,7 +200,7 @@ export function applyParams() {
         )
 
         filterMarkerGroup = L.layerGroup(
-            filterMarkers, {pane: 'filtering'}
+            filterMarkers.reverse(), {pane: 'filtering'}
         ).addTo(window.map)
     } else {
         document.body.classList.remove('filtering')

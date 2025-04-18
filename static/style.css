@@ -145,14 +145,16 @@ body.adding-spot .horizontal-button {
     margin-bottom: 18px;
 }
 .rate {
-    float: left;
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: flex-start;
+    justify-content: flex-end;
     height: 46px;
 }
 .rate:not(:checked) > input {
     display: none;
 }
 .rate:not(:checked) > label {
-    float:right;
     white-space:nowrap;
     cursor:pointer;
     font-size:30px;
