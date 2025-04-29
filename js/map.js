@@ -341,6 +341,10 @@ var addSpotStep = function (e) {
     document.body.classList.toggle('adding-spot', addSpotPoints.length > 0)
 }
 
+let extendedForm = document.getElementById('extended_info');
+extendedForm.open = localStorage.getItem('details-open') == 'true';
+extendedForm.ontoggle = () => localStorage.setItem('details-open', extendedForm.open ? 'true' : 'false');
+
 bars.forEach(bar => {
     if (bar.classList.contains('spot')) bar.onclick = addSpotStep
 })

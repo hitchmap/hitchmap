@@ -3,15 +3,41 @@ import pycountry
 from flask import jsonify, redirect, render_template
 from flask_security import Security, SQLAlchemyUserDatastore, current_user, utils
 from flask_security.models import fsqla_v3 as fsqla
+from flask_security.views import forgot_password
 from flask_wtf import FlaskForm
 from wtforms import IntegerField, SelectField, StringField, SubmitField
 from wtforms.validators import Optional
 from wtforms.widgets import NumberInput
+from sqlalchemy import text
+
+from wtforms import EmailField, ValidationError
+from flask_security import ForgotPasswordForm
 
 from backend.shared import app, db, logger, EMAIL
 
 # Set up Flask-Security database models
 fsqla.FsModels.set_db_info(db)
+
+
+class MyResetForm(ForgotPasswordForm):
+    def validate(self, **kwargs):
+        if not super().validate():
+            return False
+
+        email = self.email.data
+
+        # Check if user wrote a review
+        res = db.session.execute(
+            text("select * from user right join points where email = :email and user.id = points.user_id;"), {"email": email}
+        ).fetchone()
+
+        if not res:
+            self.email.errors.append(
+                "We only support automatically resetting passwords for users who have written reviews before. Send an email to info@hitchmap.com to reset your password, or create a new account."
+            )
+            return False
+
+        return True
 
 
 # Now we can define our models
@@ -87,7 +113,7 @@ app.config["SECURITY_CHANGE_EMAIL"] = True
 
 # Initialize Flask-Security
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
-security = Security(app, user_datastore)
+security = Security(app, user_datastore, forgot_password_form=MyResetForm)
 
 
 def init_security():
