@@ -81,8 +81,7 @@ service_area_geoms = gpd.GeoDataFrame(
     crs="EPSG:4326",
 )
 
-points_service_area = points.sjoin(service_area_geoms, how="left")
-print(len(points_service_area), len(points))
+points_service_area = points.sjoin(service_area_geoms, how="left").sort_values("geom_id").drop_duplicates("id")
 points["service_area_id"] = points_service_area["geom_id"]
 points["service_area_name"] = points_service_area["name"]
 
