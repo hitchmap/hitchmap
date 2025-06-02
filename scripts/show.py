@@ -82,6 +82,7 @@ service_area_geoms = gpd.GeoDataFrame(
 )
 
 points_service_area = points.sjoin(service_area_geoms, how="left")
+print(len(points_service_area), len(points))
 points["service_area_id"] = points_service_area["geom_id"]
 points["service_area_name"] = points_service_area["name"]
 
