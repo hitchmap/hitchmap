@@ -8,6 +8,8 @@ const knobToggle = document.getElementById('knob-toggle');
 const textFilter = document.getElementById('text-filter');
 const userFilter = document.getElementById('user-filter');
 const distanceFilter = document.getElementById('distance-filter');
+const startTimeFilter = document.getElementById('start-time-filter');
+const endTimeFilter = document.getElementById('end-time-filter');
 const clearFilters = document.getElementById('clear-filters');
 
 let isDragging = false, radAngle = 0;
@@ -83,6 +85,8 @@ knobToggle.addEventListener('input', () => setQueryParameter('mydirection', knob
 userFilter.addEventListener('input', () => setQueryParameter('user', userFilter.value));
 textFilter.addEventListener('input', () => setQueryParameter('text', textFilter.value));
 distanceFilter.addEventListener('input', () => setQueryParameter('mindistance', distanceFilter.value));
+startTimeFilter.addEventListener('input', () => setQueryParameter('starttime', startTimeFilter.value));
+endTimeFilter.addEventListener('input', () => setQueryParameter('endtime', endTimeFilter.value));
 
 function updateRotation(event) {
     const rect = knob.getBoundingClientRect();
@@ -129,6 +133,8 @@ export function applyParams() {
     textFilter.value = getQueryParameter('text')
     userFilter.value = getQueryParameter('user')
     distanceFilter.value = getQueryParameter('mindistance')
+    startTimeFilter.value = getQueryParameter('starttime');
+    endTimeFilter.value = getQueryParameter('endtime');
 
     updateRemoveFilterButtons()
 
@@ -152,6 +158,24 @@ export function applyParams() {
                 marker.options._row[6]
                 .map(x => x.toLowerCase())
                 .some(user => users.includes(user))
+            );
+        }
+        if (startTimeFilter.value) {
+            const startTime = new Date(startTimeFilter.value).getTime();
+            filterMarkers = filterMarkers.filter(
+                x => {
+                    const markerTime = new Date(x.options._row[9]).getTime();
+                    return !isNaN(markerTime) && markerTime >= startTime;
+                }
+            );
+        }
+        if (endTimeFilter.value) {
+            const endTime = new Date(endTimeFilter.value).getTime();
+            filterMarkers = filterMarkers.filter(
+                x => {
+                    const markerTime = new Date(x.options._row[9]).getTime();
+                    return !isNaN(markerTime) && markerTime <= endTime;
+                }
             );
         }
         if (textFilter.value) {
