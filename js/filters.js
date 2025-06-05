@@ -141,11 +141,18 @@ export function applyParams() {
         document.body.classList.add('filtering')
 
         if (userFilter.value) {
+            const users = userFilter.value
+            .split(';')
+            .map(u => u.trim().toLowerCase())
+            .filter(u => u.length > 0);
+
             filterMarkers = filterMarkers.filter(
-                marker => marker.options._row[6] && marker.options._row[6]
-                    .map(x => x.toLowerCase())
-                    .includes(userFilter.value.toLowerCase())
-            )
+            marker =>
+                marker.options._row[6] &&
+                marker.options._row[6]
+                .map(x => x.toLowerCase())
+                .some(user => users.includes(user))
+            );
         }
         if (textFilter.value) {
             filterMarkers = filterMarkers.filter(
