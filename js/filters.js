@@ -173,7 +173,7 @@ export function applyParams() {
                     marker.options._row[6] &&
                     marker.options._row[6]
                         .map(review => review[1])
-                        .some(time => time >= startTime)
+                        .some(time => time !== null && time >= startTime)
                 );
         }
 
