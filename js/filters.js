@@ -138,7 +138,7 @@ export function applyParams() {
 
     updateRemoveFilterButtons()
 
-    if (knobToggle.checked || textFilter.value || userFilter.value || distanceFilter.value) {
+    if (knobToggle.checked || textFilter.value || userFilter.value || distanceFilter.value || startTimeFilter.value || endTimeFilter.value) {
         if (filterMarkerGroup) filterMarkerGroup.remove()
         if (filterDestLineGroup) filterDestLineGroup.remove()
 
@@ -148,41 +148,54 @@ export function applyParams() {
 
         if (userFilter.value) {
             const users = userFilter.value
-            .split(';')
-            .map(u => u.trim().toLowerCase())
-            .filter(u => u.length > 0);
+                .split(';')
+                .map(u => u.trim().toLowerCase())
+                .filter(u => u.length > 0);
 
+            // the frist element of the tuples contained in [6] is the user name
             filterMarkers = filterMarkers.filter(
-            marker =>
-                marker.options._row[6] &&
-                marker.options._row[6]
-                .map(x => x.toLowerCase())
-                .some(user => users.includes(user))
+                marker =>
+                    marker.options._row[6] &&
+                    marker.options._row[6]
+                        .map(review => review[0].toLowerCase())
+                        .some(user => users.includes(user))
             );
         }
+
         if (startTimeFilter.value) {
             const startTime = new Date(startTimeFilter.value).getTime();
-            filterMarkers = filterMarkers.filter(
-                x => {
-                    const markerTime = new Date(x.options._row[9]).getTime();
-                    return !isNaN(markerTime) && markerTime >= startTime;
-                }
-            );
+
+            console.log(startTime)
+
+            // the second element of the tuples contained in [6] is the time when the ride happened
+            filterMarkers = filterMarkers
+                .filter(marker =>
+                    marker.options._row[6] &&
+                    marker.options._row[6]
+                        .map(review => review[1])
+                        .some(time => time >= startTime)
+                );
         }
+
         if (endTimeFilter.value) {
-            const endTime = new Date(endTimeFilter.value).getTime();
-            filterMarkers = filterMarkers.filter(
-                x => {
-                    const markerTime = new Date(x.options._row[9]).getTime();
-                    return !isNaN(markerTime) && markerTime <= endTime;
-                }
-            );
+            const endTime = new Date(endTimeFilter.value).getTime()
+
+            // the second element of the tuples contained in [6] is the time when the ride happened
+            filterMarkers = filterMarkers
+                .filter(marker =>
+                    marker.options._row[6] &&
+                    marker.options._row[6]
+                        .map(review => review[1])
+                        .some(time => time !== null && time <= endTime)
+                );
         }
+
         if (textFilter.value) {
             filterMarkers = filterMarkers.filter(
                 x => x.options._row[3].toLowerCase().includes(textFilter.value.toLowerCase())
             )
         }
+
         if (distanceFilter.value) {
             filterMarkers = filterMarkers.filter(
                 x => {
@@ -224,14 +237,14 @@ export function applyParams() {
         filterMarkers = filterMarkers.map(
             spot => {
                 let loc = spot.getLatLng()
-                let marker = new L.circleMarker(loc, Object.assign({}, spot.options, { pane: 'filtering'}))
+                let marker = new L.circleMarker(loc, Object.assign({}, spot.options, { pane: 'filtering' }))
                 marker.on('click', e => spot.fire('click', e))
                 return marker
             }
         )
 
         filterMarkerGroup = L.layerGroup(
-            filterMarkers.reverse(), {pane: 'filtering'}
+            filterMarkers.reverse(), { pane: 'filtering' }
         ).addTo(window.map)
     } else {
         document.body.classList.remove('filtering')
