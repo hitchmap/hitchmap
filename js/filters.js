@@ -165,8 +165,6 @@ export function applyParams() {
         if (startTimeFilter.value) {
             const startTime = new Date(startTimeFilter.value).getTime();
 
-            console.log(startTime)
-
             // the second element of the tuples contained in [6] is the time when the ride happened
             filterMarkers = filterMarkers
                 .filter(marker =>
