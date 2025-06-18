@@ -18,7 +18,7 @@ export function createUserMarkers(markers) {
     userMarkerGroup.clearLayers()
     let userMarkers = markers.filter(
         marker => marker.options._row[6] && marker.options._row[6]
-            .map(x => x.toLowerCase())
+            .map(x => x[0].toLowerCase())
             .includes(currentUser.toLowerCase())
     )
     for (let marker of userMarkers) {

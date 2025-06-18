@@ -217,13 +217,18 @@ places["ride_distance"] = points[~points.ride_distance.isnull()].groupby("cluste
 places["text"] = groups.text.apply(lambda t: "<hr>".join(t.dropna()))
 places["review_count"] = groups.size()
 
-# to prevent confusion, only add a review user if their review is listed
-places["review_users"] = points.dropna(subset=["text", "hitchhiker"]).groupby("cluster_id").hitchhiker.unique().apply(list)
+# to prevent confusion, only add a review user if they have a text written
+places["reviews"] = (
+    points.dropna(subset=["text", "hitchhiker"])
+    .groupby("cluster_id")
+    .apply(lambda g: list(zip(g.hitchhiker, g.ride_datetime)))
+)
 
 places["dest_lats"] = points.dropna(subset=["dest_lat", "dest_lon"]).groupby("cluster_id").dest_lat.apply(list)
 places["dest_lons"] = points.dropna(subset=["dest_lat", "dest_lon"]).groupby("cluster_id").dest_lon.apply(list)
 places["lat"] = groups.lat.mean()
 places["lon"] = groups.lon.mean()
+
 
 if LIGHT:
     places = places[(places.text.str.len() > 0) | ~places.ride_distance.isnull()]
@@ -266,7 +271,7 @@ elif CITIES:
         f.write(index_rendered)
 
 
-# z-index is rating + 2 * no of reviews + 2 * no of reviews with destination
+# z-index is rating + 2 * number of reviews + 2 * number of reviews with destination
 places["z-index"] = places["rating"] + 2 * places["review_count"] + 2 * places["dest_lats"].str.len().fillna(0)
 
 places.reset_index(inplace=True)
@@ -281,7 +286,7 @@ marker_data = places[
         "text",
         "wait",
         "ride_distance",
-        "review_users",
+        "reviews",
         "dest_lats",
         "dest_lons",
     ]

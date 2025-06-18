@@ -8,6 +8,8 @@ const knobToggle = document.getElementById('knob-toggle');
 const textFilter = document.getElementById('text-filter');
 const userFilter = document.getElementById('user-filter');
 const distanceFilter = document.getElementById('distance-filter');
+const startTimeFilter = document.getElementById('start-time-filter');
+const endTimeFilter = document.getElementById('end-time-filter');
 const clearFilters = document.getElementById('clear-filters');
 
 let isDragging = false, radAngle = 0;
@@ -83,6 +85,8 @@ knobToggle.addEventListener('input', () => setQueryParameter('mydirection', knob
 userFilter.addEventListener('input', () => setQueryParameter('user', userFilter.value));
 textFilter.addEventListener('input', () => setQueryParameter('text', textFilter.value));
 distanceFilter.addEventListener('input', () => setQueryParameter('mindistance', distanceFilter.value));
+startTimeFilter.addEventListener('input', () => setQueryParameter('starttime', startTimeFilter.value));
+endTimeFilter.addEventListener('input', () => setQueryParameter('endtime', endTimeFilter.value));
 
 function updateRotation(event) {
     const rect = knob.getBoundingClientRect();
@@ -129,10 +133,12 @@ export function applyParams() {
     textFilter.value = getQueryParameter('text')
     userFilter.value = getQueryParameter('user')
     distanceFilter.value = getQueryParameter('mindistance')
+    startTimeFilter.value = getQueryParameter('starttime');
+    endTimeFilter.value = getQueryParameter('endtime');
 
     updateRemoveFilterButtons()
 
-    if (knobToggle.checked || textFilter.value || userFilter.value || distanceFilter.value) {
+    if (knobToggle.checked || textFilter.value || userFilter.value || distanceFilter.value || startTimeFilter.value || endTimeFilter.value) {
         if (filterMarkerGroup) filterMarkerGroup.remove()
         if (filterDestLineGroup) filterDestLineGroup.remove()
 
@@ -142,23 +148,52 @@ export function applyParams() {
 
         if (userFilter.value) {
             const users = userFilter.value
-            .split(';')
-            .map(u => u.trim().toLowerCase())
-            .filter(u => u.length > 0);
+                .split(';')
+                .map(u => u.trim().toLowerCase())
+                .filter(u => u.length > 0);
 
+            // the frist element of the tuples contained in [6] is the user name
             filterMarkers = filterMarkers.filter(
-            marker =>
-                marker.options._row[6] &&
-                marker.options._row[6]
-                .map(x => x.toLowerCase())
-                .some(user => users.includes(user))
+                marker =>
+                    marker.options._row[6] &&
+                    marker.options._row[6]
+                        .map(review => review[0].toLowerCase())
+                        .some(user => users.includes(user))
             );
         }
+
+        if (startTimeFilter.value) {
+            const startTime = new Date(startTimeFilter.value).getTime();
+
+            // the second element of the tuples contained in [6] is the time when the ride happened
+            filterMarkers = filterMarkers
+                .filter(marker =>
+                    marker.options._row[6] &&
+                    marker.options._row[6]
+                        .map(review => review[1])
+                        .some(time => time !== null && time >= startTime)
+                );
+        }
+
+        if (endTimeFilter.value) {
+            const endTime = new Date(endTimeFilter.value).getTime()
+
+            // the second element of the tuples contained in [6] is the time when the ride happened
+            filterMarkers = filterMarkers
+                .filter(marker =>
+                    marker.options._row[6] &&
+                    marker.options._row[6]
+                        .map(review => review[1])
+                        .some(time => time !== null && time <= endTime)
+                );
+        }
+
         if (textFilter.value) {
             filterMarkers = filterMarkers.filter(
                 x => x.options._row[3].toLowerCase().includes(textFilter.value.toLowerCase())
             )
         }
+
         if (distanceFilter.value) {
             filterMarkers = filterMarkers.filter(
                 x => {
@@ -200,14 +235,14 @@ export function applyParams() {
         filterMarkers = filterMarkers.map(
             spot => {
                 let loc = spot.getLatLng()
-                let marker = new L.circleMarker(loc, Object.assign({}, spot.options, { pane: 'filtering'}))
+                let marker = new L.circleMarker(loc, Object.assign({}, spot.options, { pane: 'filtering' }))
                 marker.on('click', e => spot.fire('click', e))
                 return marker
             }
         )
 
         filterMarkerGroup = L.layerGroup(
-            filterMarkers.reverse(), {pane: 'filtering'}
+            filterMarkers.reverse(), { pane: 'filtering' }
         ).addTo(window.map)
     } else {
         document.body.classList.remove('filtering')
