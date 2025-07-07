@@ -4,6 +4,7 @@ import zipfile
 from io import BytesIO
 import pandas as pd
 import random, string
+import subprocess
 
 root_dir = os.path.join(os.path.dirname(__file__), "..")
 db_dir = os.path.abspath(os.path.join(root_dir, "db"))
@@ -14,26 +15,67 @@ os.makedirs(dist_dir, exist_ok=True)
 DATABASE = os.path.join(db_dir, "prod-points.sqlite")
 DATABASE_DUMP = os.path.join(dist_dir, "dump.sqlite")
 
+if os.path.exists(DATABASE_DUMP):
+    os.remove(DATABASE_DUMP)
+
+
+def copy_table_schema(table_name):
+    """
+    Copy table schema using sqlite3 CLI .schema command
+    """
+
+    source_db = DATABASE
+    dest_db = DATABASE_DUMP
+
+    # Get schema using sqlite3 CLI
+    result = subprocess.run(["sqlite3", source_db, f".schema {table_name}"], capture_output=True, text=True)
+
+    if result.returncode != 0:
+        raise Exception(f"Error getting schema: {result.stderr}")
+
+    schema_sql = result.stdout.strip()
+
+    if not schema_sql:
+        raise Exception(f"Table {table_name} not found or has no schema")
+
+    # Apply schema to destination database
+    conn = sqlite3.connect(dest_db)
+    try:
+        # Execute all schema statements
+        conn.executescript(schema_sql)
+        conn.commit()
+        print(f"Schema for table '{table_name}' copied successfully")
+    finally:
+        conn.close()
+
+
 if not os.path.exists(DATABASE):
     print(f"DB not found: {DATABASE}")
     exit()
 
+copy_table_schema("points")
 all_points = pd.read_sql("select * from points where not banned", sqlite3.connect(DATABASE))
 all_points["ip"] = ""
-all_points.to_sql("points", sqlite3.connect(DATABASE_DUMP), index=False, if_exists="replace")
+all_points.to_sql("points", sqlite3.connect(DATABASE_DUMP), index=False, if_exists="append")
 
 
+copy_table_schema("duplicates")
 duplicates = pd.read_sql("select * from duplicates where reviewed = accepted", sqlite3.connect(DATABASE))
 duplicates["ip"] = ""
-duplicates.to_sql("duplicates", sqlite3.connect(DATABASE_DUMP), index=False, if_exists="replace")
-service_areas = pd.read_sql("select * from service_areas", sqlite3.connect(DATABASE))
-service_areas.to_sql("service_areas", sqlite3.connect(DATABASE_DUMP), index=False, if_exists="replace")
+duplicates.to_sql("duplicates", sqlite3.connect(DATABASE_DUMP), index=False, if_exists="append")
 
+copy_table_schema("service_areas")
+service_areas = pd.read_sql("select * from service_areas", sqlite3.connect(DATABASE))
+service_areas.to_sql("service_areas", sqlite3.connect(DATABASE_DUMP), index=False, if_exists="append")
+
+copy_table_schema("road_islands")
 road_islands = pd.read_sql("select * from road_islands", sqlite3.connect(DATABASE))
-road_islands.to_sql("road_islands", sqlite3.connect(DATABASE_DUMP), index=False, if_exists="replace")
+road_islands.to_sql("road_islands", sqlite3.connect(DATABASE_DUMP), index=False, if_exists="append")
 
 conn = sqlite3.connect(DATABASE)
 cursor = conn.cursor()
+
+copy_table_schema("user")
 
 user_ids = pd.read_sql("select id from user", conn)
 cursor.execute("PRAGMA table_info(user)")
@@ -67,10 +109,11 @@ for column_info in schema:
         users_data[column_name] = [generate_random_string() for _ in range(len(user_ids))]
 
 users_df = pd.DataFrame(users_data)
-users_df.to_sql("user", sqlite3.connect(DATABASE_DUMP), index=False, if_exists="replace")
+users_df.to_sql("user", sqlite3.connect(DATABASE_DUMP), index=False, if_exists="append")
 
+copy_table_schema("roles_users")
 roles_users = pd.read_sql("select * from roles_users", sqlite3.connect(DATABASE))
-roles_users.to_sql("roles_users", sqlite3.connect(DATABASE_DUMP), index=False, if_exists="replace")
+roles_users.to_sql("roles_users", sqlite3.connect(DATABASE_DUMP), index=False, if_exists="append")
 
 # Dictionary of DataFrames with filenames
 dfs = {
