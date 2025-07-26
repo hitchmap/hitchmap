@@ -73,23 +73,22 @@ for _cluster_id, group in grouped:
                 line_coords = [(pt["lon"], pt["lat"]) for pt in element["geometry"]]
                 lines.append(LineString(line_coords))
 
-        if lines:
-            multilinestring = MultiLineString(lines)
-            geom_wkt = multilinestring.wkt
-            road_networks.append((lat, lon, search_size_deg, geom_wkt))
+        multilinestring = MultiLineString(lines)
+        geom_wkt = multilinestring.wkt
+        road_networks.append((lat, lon, search_size_deg, geom_wkt))
 
-            # create perimeter of at least 1 meter
-            perimeter = Point(lon, lat).buffer(max(search_size_deg / 1.1, 1 / 111_000), quad_segs=4)
+        # create perimeter of at least 1 meter
+        perimeter = Point(lon, lat).buffer(max(search_size_deg / 1.1, 1 / 111_000), quad_segs=4)
 
-            roads_in_perimeter = multilinestring.intersection(perimeter)
+        roads_in_perimeter = multilinestring.intersection(perimeter)
 
-            road_network_with_boundary = shapely.unary_union([perimeter.boundary, roads_in_perimeter], grid_size=0.000001)
-            # Each "hole" in the road network is its own road_island
-            road_island_collection = shapely.polygonize([road_network_with_boundary])
+        road_network_with_boundary = shapely.unary_union([perimeter.boundary, roads_in_perimeter], grid_size=0.000001)
+        # Each "hole" in the road network is its own road_island
+        road_island_collection = shapely.polygonize([road_network_with_boundary])
 
-            for road_island in road_island_collection.geoms:
-                road_islands.append((road_island_id, road_island.wkt))
-                road_island_id += 1
+        for road_island in road_island_collection.geoms:
+            road_islands.append((road_island_id, road_island.wkt))
+            road_island_id += 1
 
 
 # Convert to DataFrame
