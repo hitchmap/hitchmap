@@ -260,7 +260,10 @@ function updateRemoveFilterButtons() {
         { key: 'mydirection', label: 'Directional filter', value: getQueryParameter('mydirection') },
         { key: 'text', label: 'Text', value: getQueryParameter('text') },
         { key: 'user', label: 'User', value: getQueryParameter('user') },
-        { key: 'mindistance', label: 'Min Distance', value: getQueryParameter('mindistance') }
+        { key: 'mindistance', label: 'Min Distance', value: getQueryParameter('mindistance') },
+        { key: 'starttime', label: 'Start Date', value: getQueryParameter('starttime') },
+        { key: 'endtime', label: 'End Date', value: getQueryParameter('endtime') },
+
     ].filter(filter => filter.value !== null);
 
     // Create buttons for active filters

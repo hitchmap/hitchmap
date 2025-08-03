@@ -48,7 +48,7 @@ def experience():
 
     # this is the format used by the datetime input
     date_format = "%Y-%m-%dT%H:%M"
-    assert datetime_ride is None or datetime.strptime(datetime_ride, date_format)
+    assert datetime_ride is None or (datetime.strptime(datetime_ride, date_format) and datetime_ride[0] == "2")
 
     ip = request.headers.getlist("X-Real-IP")[-1] if request.headers.getlist("X-Real-IP") else request.remote_addr
 

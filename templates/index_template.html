@@ -46,7 +46,7 @@
                     </select>
                 </div>
                 <label for="datetime_ride">When did you get the ride?<span id="no-ride"> If you didn't get a ride, when did you stop soliciting rides?</span></label>
-                <input id="datetime_ride" type="datetime-local" name="datetime_ride">
+                <input id="datetime_ride" type="datetime-local" name="datetime_ride" min="2000-01-01T00:00:00">
                 <!-- maximum date is today -->
                 <script>
                     document.getElementById("datetime_ride").max = (new Date().toISOString().slice(0,11)) + "23:59";
