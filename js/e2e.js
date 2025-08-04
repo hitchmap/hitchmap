@@ -27,36 +27,36 @@ Promise.all([async browser => {
         page.waitForNavigation()
     ]);
 
-    // Click on <input> #email > #email
-    await page.click('#email > #email');
+    // Click on <input> #email
+    await page.click('#email');
 
-    // Fill "ab@cd.nl" on <input> #email > #email
-    await page.fill('#email > #email', `${USER1}@cd.nl`);
+    // Fill "ab@cd.nl" on <input> #email
+    await page.fill('#email', `${USER1}@cd.nl`);
 
     // Press Tab on input
-    await page.press('#email > #email', 'Tab');
+    await page.press('#email', 'Tab');
 
     // Fill "User1" on <input> #username > #username
-    await page.fill('#username > #username', USER1);
+    await page.fill('#username', USER1);
 
     // Press Tab on input
-    await page.press('#username > #username', 'Tab');
+    await page.press('#username', 'Tab');
 
     // Fill "12345678" on <input> #password > #password
-    await page.fill('#password > #password', '12345678');
+    await page.fill('#password', '12345678');
 
     // Press Tab on input
-    await page.press('#password > #password', 'Tab');
+    await page.press('#password', 'Tab');
 
     // Fill "12345678" on <input> #password_confirm > #password_confirm
-    await page.fill('#password_confirm > #password_confirm', '12345678');
+    await page.fill('#password_confirm', '12345678');
 
     // Press Tab on input
-    await page.press('#password_confirm > #password_confirm', 'Tab');
+    await page.press('#password_confirm', 'Tab');
 
     // Press Enter on input
     await Promise.all([
-        page.press('#submit > #submit', 'Enter'),
+        page.press('#submit', 'Enter'),
         page.waitForNavigation()
     ]);
 
@@ -97,7 +97,7 @@ Promise.all([async browser => {
     await page.click('#datetime_ride');
 
     // Fill "1994-01-01T01:01" on <input> #datetime_ride
-    await page.fill('#datetime_ride', '1994-01-01T01:01');
+    await page.fill('#datetime_ride', '2020-01-01T01:01');
 
     // Click on <button> "Submit"
     await page.click('#spot-form > button');
