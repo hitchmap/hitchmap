@@ -3,7 +3,7 @@
 {% block content %}
     <div class="sidebar spot-form-container">
         <h3>New Review</h3>
-        <div class="nickname-container"style="background-color: #ffdddd; border-radius: 8px; padding: 10px; border: 1px solid #ff8888; color: #a94442; margin-bottom: 10px;">
+        <div id="ask-register-container">
             To keep track of your reviews, <a href="/login">log in</a> or <a href="/register">register</a>.
             <br>
         </div>
@@ -29,7 +29,7 @@
             <input type="number" name="wait" min="0" max="9999" size="4"> minutes
             <label>Comment (optional)</label>
             <div><textarea name=comment></textarea></div>
-            <div class="nickname-container">
+            <div id="nickname-container">
                 <label for="nickname-input">Public nickname (alphanumeric)</label>
                 <input id="nickname-input" name="nickname" maxlength="32" pattern="[a-zA-Z0-9]*">
                 <span id="nickname-error-message" class="error"></span>
