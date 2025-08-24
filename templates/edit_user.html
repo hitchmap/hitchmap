@@ -3,7 +3,11 @@
 {% block content %}
 <h1>Edit your personal data </h1> 
 <form method="POST" action="{{ url_for('form') }}"> 
-    {{ form.csrf_token }} 
+    {{ form.csrf_token }}
+    <div style="background-color: #f5f5f5; border-radius: 8px; padding: 16px;">
+        <p>I'd like to include all personal data I added to this profile (gender, age, etc.) in Hitchmap's freely downloadable dataset, which is, among other things, used for scientific purposes.</p>
+        <p>{{ form.make_public.label }} {{ form.make_public() }}</p>
+    </div>
     <p>{{ form.gender.label }} {{ form.gender() }}</p> 
     <p>{{ form.year_of_birth.label }} {{ form.year_of_birth() }}</p>
     <p>{{ form.hitchhiking_since.label }} {{ form.hitchhiking_since() }}</p>
