@@ -94,27 +94,27 @@ columns = [col[1] for col in schema]
 # Prepare new DataFrame
 new_rows = []
 for _, row in user_df.iterrows():
+    new_row = {}
+    for col_info in schema:
+        col_name = col_info[1]
+        col_type = col_info[2].upper()
+        if col_name == id_col:
+            new_row[col_name] = row[id_col]
+        elif col_name == make_public_col:
+            new_row[col_name] = row[make_public_col]
+        elif col_type in ["INTEGER", "INT"]:
+            new_row[col_name] = random.randint(0, 1000)
+        elif col_type in ["REAL", "FLOAT", "DOUBLE"]:
+            new_row[col_name] = round(random.uniform(0, 100), 2)
+        elif col_type in ["BOOLEAN", "BOOL"]:
+            new_row[col_name] = random.choice([0, 1])
+        else:  # Default to TEXT/VARCHAR
+            new_row[col_name] = generate_random_string()
+    # If consent is given, show personal user information that is equivalent to the account page
     if row[make_public_col]:
-        # Leave row as is
-        new_rows.append(row)
-    else:
-        new_row = {}
-        for col_info in schema:
-            col_name = col_info[1]
-            col_type = col_info[2].upper()
-            if col_name == id_col:
-                new_row[col_name] = row[id_col]
-            elif col_name == make_public_col:
-                new_row[col_name] = row[make_public_col]
-            elif col_type in ["INTEGER", "INT"]:
-                new_row[col_name] = random.randint(0, 1000)
-            elif col_type in ["REAL", "FLOAT", "DOUBLE"]:
-                new_row[col_name] = round(random.uniform(0, 100), 2)
-            elif col_type in ["BOOLEAN", "BOOL"]:
-                new_row[col_name] = random.choice([0, 1])
-            else:  # Default to TEXT/VARCHAR
-                new_row[col_name] = generate_random_string()
-        new_rows.append(pd.Series(new_row))
+        for user_info_col in ["gender", "year_of_birth", "hitchhiking_since", "origin_country", "origin_city", "hitchwiki_username", "trustroots_username"]:
+            new_row[user_info_col] = row[user_info_col]
+    new_rows.append(pd.Series(new_row))
 
 users_df = pd.DataFrame(new_rows, columns=columns)
 users_df.to_sql("user", sqlite3.connect(DATABASE_DUMP), index=False, if_exists="append")
