@@ -321,7 +321,9 @@ var addSpotStep = function (e) {
             $$("#no-ride").classList.toggle("make-invisible", destinationGiven);
 
             // nicknames wont be recorded if a user is logged in
-            $$("#nickname-container").classList.toggle("make-invisible", !!currentUser);
+            document.querySelectorAll(".nickname-container").forEach(el => {
+                el.classList.toggle("make-invisible", !!currentUser);
+            });
             $$('#spot-form input[name=coords]').value = `${points[0].lat},${points[0].lng},${points[1].lat},${points[1].lng}`
 
             const form = $$("#spot-form");
