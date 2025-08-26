@@ -5,7 +5,7 @@
 <form method="POST" action="{{ url_for('form') }}"> 
     {{ form.csrf_token }}
     <div style="background-color: #f5f5f5; border-radius: 8px; padding: 16px;">
-        <p>I'd like to include all personal data I added to this profile (gender, age, etc.) in Hitchmap's freely downloadable dataset, which is, among other things, used for scientific purposes. The dataset can be found in the menu.</p>
+        <p>I'd like to add my gender, year of birth, hometown, Hitchwiki username, and "Hitchhiking Since" to Hitchmap's public dataset. I understand that while this data is published for scientific research on hitchhiking, anyone can download this data from Hitchmap's main menu if I check this box.</p>
         <p style="display: flex; gap: 8px;">{{ form.make_public() }} {{ form.make_public.label }} </p>
     </div>
     <p>{{ form.gender.label }} {{ form.gender() }}</p> 
