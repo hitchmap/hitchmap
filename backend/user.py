@@ -63,7 +63,13 @@ class CountrySelectField(SelectField):
 
 
 class UserEditForm(FlaskForm):
-    make_public = BooleanField("I agree", default=False)
+    make_public = BooleanField(
+        """I'd like to add my gender, year of birth, hometown, Hitchwiki username,
+and "Hitchhiking Since" to Hitchmap's public dataset.
+I understand that while this data is published for scientific research on hitchhiking,
+anyone can download this data from Hitchmap's main menu if I check this box.""",
+        default=False,
+    )
     gender = SelectField(
         "Gender",
         choices=[
