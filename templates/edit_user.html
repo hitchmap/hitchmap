@@ -4,7 +4,7 @@
 <h1>Edit your personal data </h1> 
 <form method="POST" action="{{ url_for('form') }}"> 
     {{ form.csrf_token }}
-    <div style="background-color: #f5f5f5; border-radius: 8px; padding: 16px;">
+    <div style="background-color: #f5f5f5; border-radius: 8px; padding: 8px; font-size: 0.8em;">
         <p style="display: flex; align-items: baseline; gap: 12px;">{{ form.make_public() }} {{ form.make_public.label }}</p>
     </div>
     <p>{{ form.gender.label }} {{ form.gender() }}</p> 
