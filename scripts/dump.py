@@ -140,6 +140,7 @@ dfs = {
     "service_areas.csv": service_areas,
     "points.csv": all_points,
     "duplicates.csv": duplicates,
+    "user.csv": users_df
 }
 
 # Writing to a ZIP file
