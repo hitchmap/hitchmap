@@ -1,0 +1,695 @@
+country,city,lat,lon
+Albania,Durrës,41.3233,19.4412
+Albania,Elbasan,41.1125,20.0822
+Albania,Tirana,41.3275,19.8187
+Austria,Graz,47.0707,15.4395
+Austria,Innsbruck,47.2692,11.4041
+Austria,Linz,48.3069,14.2858
+Austria,Salzburg,47.8095,13.0550
+Austria,Vienna,48.2082,16.3738
+Belgium,Antwerp,51.2194,4.4025
+Belgium,Bruges,51.2093,3.2247
+Belgium,Brussels,50.8503,4.3517
+Belgium,Charleroi,50.4108,4.4446
+Belgium,Ghent,51.0543,3.7174
+Belgium,Liège,50.6326,5.5797
+Belgium,Namur,50.4650,4.8650
+Bosnia and Herzegovina,Banja Luka,44.7722,17.1910
+Bosnia and Herzegovina,Mostar,43.3433,17.8081
+Bosnia and Herzegovina,Sarajevo,43.8563,18.4131
+Bosnia and Herzegovina,Tuzla,44.5375,18.6735
+Bosnia and Herzegovina,Zenica,44.2017,17.9040
+Bulgaria,Burgas,42.5048,27.4626
+Bulgaria,Pleven,43.4167,24.6167
+Bulgaria,Plovdiv,42.1354,24.7453
+Bulgaria,Rousse,43.8564,25.9706
+Bulgaria,Sofia,42.6977,23.3219
+Bulgaria,Stara Zagora,42.4250,25.6250
+Bulgaria,Varna,43.2141,27.9147
+Croatia,Rijeka,45.3271,14.4422
+Croatia,Split,43.5081,16.4402
+Croatia,Zagreb,45.8150,15.9819
+Cyprus,Limassol,34.6842,33.0379
+Cyprus,Nicosia,35.1856,33.3823
+Czech Republic,Brno,49.1952,16.6080
+Czech Republic,Liberec,50.7663,15.0543
+Czech Republic,Olomouc,49.5938,17.2508
+Czech Republic,Ostrava,49.8209,18.2625
+Czech Republic,Pilsen,49.7475,13.3776
+Czech Republic,Prague,50.0755,14.4378
+Denmark,Aalborg,57.0488,9.9217
+Denmark,Aarhus,56.1572,10.2107
+Denmark,Copenhagen,55.6761,12.5683
+Denmark,Odense,55.4038,10.4024
+Estonia,Tallinn,59.4370,24.7536
+Estonia,Tartu,58.3780,26.7290
+Finland,Espoo,60.2055,24.6559
+Finland,Helsinki,60.1699,24.9384
+Finland,Jyväskylä,62.2415,25.7209
+Finland,Lahti,60.9827,25.6612
+Finland,Oulu,65.0124,25.4682
+Finland,Tampere,61.4978,23.7610
+Finland,Turku,60.4518,22.2666
+Finland,Vantaa,60.2934,25.0378
+France,Paris,48.8566,2.3522
+France,Marseille,43.2965,5.3698
+France,Lyon,45.7640,4.8357
+France,Toulouse,43.6047,1.4442
+France,Nice,43.7102,7.2620
+France,Nantes,47.2184,-1.5536
+France,Strasbourg,48.5734,7.7521
+France,Montpellier,43.6108,3.8767
+France,Bordeaux,44.8378,-0.5792
+France,Lille,50.6292,3.0573
+Germany,Berlin,52.5200,13.4050
+Germany,Hamburg,53.5511,9.9937
+Germany,Munich,48.1351,11.5820
+Germany,Cologne,50.9375,6.9603
+Germany,Frankfurt,50.1109,8.6821
+Germany,Stuttgart,48.7758,9.1829
+Germany,Düsseldorf,51.2277,6.7735
+Germany,Leipzig,51.3397,12.3731
+Germany,Dortmund,51.5136,7.4653
+Germany,Essen,51.4556,7.0116
+Greece,Athens,37.9838,23.7275
+Greece,Thessaloniki,40.6401,22.9444
+Greece,Patras,38.2466,21.7346
+Greece,Heraklion,35.3387,25.1442
+Greece,Larissa,39.6390,22.4173
+Hungary,Budapest,47.4979,19.0402
+Hungary,Debrecen,47.5316,21.6273
+Hungary,Szeged,46.2530,20.1414
+Hungary,Miskolc,48.1035,20.7784
+Hungary,Pécs,46.0727,18.2323
+Ireland,Dublin,53.3498,-6.2603
+Ireland,Cork,51.8979,-8.4706
+Italy,Rome,41.9028,12.4964
+Italy,Milan,45.4642,9.1900
+Italy,Naples,40.8518,14.2681
+Italy,Turin,45.0703,7.6869
+Italy,Palermo,38.1157,13.3615
+Italy,Genoa,44.4056,8.9463
+Italy,Bologna,44.4949,11.3426
+Italy,Florence,43.7696,11.2558
+Italy,Bari,41.1171,16.8719
+Latvia,Riga,56.9496,24.1052
+Latvia,Daugavpils,55.8833,26.5333
+Lithuania,Vilnius,54.6872,25.2797
+Lithuania,Kaunas,54.8985,23.9036
+Lithuania,Klaipėda,55.7033,21.1443
+Netherlands,Amsterdam,52.3676,4.9041
+Netherlands,Rotterdam,51.9244,4.4777
+Netherlands,The Hague,52.0705,4.3007
+Netherlands,Utrecht,52.0907,5.1214
+Netherlands,Eindhoven,51.4416,5.4697
+Poland,Warsaw,52.2297,21.0122
+Poland,Kraków,50.0647,19.9450
+Poland,Łódź,51.7592,19.4559
+Poland,Wrocław,51.1079,17.0385
+Poland,Poznań,52.4064,16.9252
+Portugal,Lisbon,38.7223,-9.1393
+Portugal,Porto,41.1579,-8.6291
+Portugal,Braga,41.5454,-8.4265
+Portugal,Coimbra,40.2033,-8.4103
+Romania,Bucharest,44.4268,26.1025
+Romania,Cluj-Napoca,46.7712,23.6236
+Romania,Timișoara,45.7489,21.2087
+Romania,Iași,47.1585,27.6014
+Romania,Constanța,44.1598,28.6348
+Serbia,Belgrade,44.7866,20.4489
+Serbia,Novi Sad,45.2671,19.8335
+Serbia,Niš,43.3209,21.8958
+Slovakia,Bratislava,48.1486,17.1077
+Slovakia,Košice,48.7164,21.2611
+Slovenia,Ljubljana,46.0569,14.5058
+Slovenia,Maribor,46.5547,15.6466
+Spain,Madrid,40.4168,-3.7038
+Spain,Barcelona,41.3851,2.1734
+Spain,Valencia,39.4699,-0.3763
+Spain,Seville,37.3891,-5.9845
+Spain,Zaragoza,41.6488,-0.8891
+Sweden,Stockholm,59.3293,18.0686
+Sweden,Gothenburg,57.7089,11.9746
+Sweden,Malmö,55.6050,13.0038
+Switzerland,Zürich,47.3769,8.5417
+Switzerland,Geneva,46.2044,6.1432
+Switzerland,Basel,47.5596,7.5806
+Switzerland,Bern,46.9480,7.4474
+Switzerland,Lausanne,46.5197,6.6323
+United Kingdom,London,51.5074,-0.1278
+United Kingdom,Birmingham,52.4862,-1.8904
+United Kingdom,Manchester,53.4808,-2.2426
+United Kingdom,Leeds,53.8008,-1.5491
+United Kingdom,Liverpool,53.4084,-2.9916
+United Kingdom,Glasgow,55.8642,-4.2518
+United Kingdom,Edinburgh,55.9533,-3.1883
+United Kingdom,Bristol,51.4545,-2.5879
+United Kingdom,Cardiff,51.4816,-3.1791
+United Kingdom,Belfast,54.5973,-5.9301
+
+France,Aix-en-Provence,43.5297,5.4474
+France,Amiens,49.8942,2.2957
+France,Angers,47.4784,-0.5632
+France,Besançon,47.2378,6.0241
+France,Boulogne-Billancourt,48.8352,2.2409
+France,Brest,48.3904,-4.4861
+France,Caen,49.1829,-0.3707
+France,Clermont-Ferrand,45.7772,3.0870
+France,Dijon,47.3220,5.0415
+France,Grenoble,45.1885,5.7245
+France,Le Havre,49.4944,0.1078
+France,Le Mans,48.0061,0.1996
+France,Limoges,45.8336,1.2611
+France,Metz,49.1193,6.1757
+France,Mulhouse,47.7508,7.3359
+France,Nancy,48.6921,6.1844
+France,Nîmes,43.8367,4.3601
+France,Orléans,47.9029,1.9039
+France,Perpignan,42.6986,2.8956
+France,Reims,49.2583,4.0317
+France,Rennes,48.1173,-1.6778
+France,Rouen,49.4431,1.0993
+France,Saint-Denis,48.9358,2.3596
+France,Saint-Étienne,45.4397,4.3872
+France,Toulon,43.1242,5.9280
+France,Tours,47.3941,0.6848
+France,Villeurbanne,45.7715,4.8815
+Germany,Aachen,50.7753,6.0839
+Germany,Augsburg,48.3705,10.8978
+Germany,Bergisch-Gladbach,50.9856,7.1363
+Germany,Bielefeld,52.0302,8.5325
+Germany,Bochum,51.4818,7.2162
+Germany,Bonn,50.7374,7.0982
+Germany,Bottrop,51.5263,6.9228
+Germany,Braunschweig,52.2689,10.5267
+Germany,Bremerhaven,53.5395,8.5809
+Germany,Chemnitz,50.8322,12.9242
+Germany,Cottbus,51.7567,14.3349
+Germany,Darmstadt,49.8707,8.6495
+Germany,Erfurt,50.9848,11.0299
+Germany,Erlangen,49.5896,11.0119
+Germany,Freiburg,47.9990,7.8421
+Germany,Fürth,49.4772,10.9892
+Germany,Gelsenkirchen,51.5175,7.0857
+Germany,Gera,50.8806,12.0833
+Germany,Göttingen,51.5412,9.9158
+Germany,Hagen,51.3671,7.4632
+Germany,Hamm,51.6807,7.8161
+Germany,Heidelberg,49.3988,8.6724
+Germany,Heilbronn,49.1403,9.2201
+Germany,Herne,51.5363,7.2250
+Germany,Hildesheim,52.1507,9.9514
+Germany,Ingolstadt,48.7650,11.4261
+Germany,Jena,50.9272,11.5892
+Germany,Karlsruhe,49.0069,8.4037
+Germany,Kassel,51.3127,9.4797
+Germany,Kiel,54.3233,10.1228
+Germany,Koblenz,50.3569,7.5890
+Germany,Krefeld,51.3369,6.5642
+Germany,Leverkusen,51.0459,7.0192
+Germany,Lübeck,53.8655,10.6866
+Germany,Ludwigshafen,49.4741,8.4346
+Germany,Magdeburg,52.1205,11.6276
+Germany,Mainz,50.0000,8.2711
+Germany,Mannheim,49.4875,8.4660
+Germany,Moers,51.4516,6.6409
+Germany,Mönchengladbach,51.1804,6.4419
+Germany,Mülheim,51.4332,6.8830
+Germany,Münster,51.9607,7.6261
+Germany,Neuss,51.1988,6.6915
+Germany,Nuremberg,49.4521,11.0767
+Germany,Oberhausen,51.4698,6.8514
+Germany,Offenbach am Main,50.1055,8.7611
+Germany,Oldenburg,53.1439,8.2140
+Germany,Osnabrück,52.2799,8.0472
+Germany,Paderborn,51.7189,8.7575
+Germany,Pforzheim,48.8911,8.6989
+Germany,Potsdam,52.3906,13.0645
+Germany,Recklinghausen,51.6145,7.1997
+Germany,Regensburg,49.0195,12.0977
+Germany,Remscheid,51.1787,7.1926
+Germany,Reutlingen,48.4912,9.2104
+Germany,Rostock,54.0924,12.0991
+Germany,Saarbrücken,49.2354,7.0016
+Germany,Salzgitter,52.1535,10.4120
+Germany,Siegen,50.8746,8.0244
+Germany,Solingen,51.1710,7.0890
+Germany,Trier,49.7497,6.6371
+Germany,Ulm,48.4011,9.9873
+Germany,Witten,51.4433,7.3353
+Germany,Wolfsburg,52.4227,10.7872
+Germany,Würzburg,49.7913,9.9534
+Russia,Moscow,55.7558,37.6173
+Russia,Saint Petersburg,59.9343,30.3351
+Russia,Novosibirsk,55.0084,82.9357
+Russia,Yekaterinburg,56.8389,60.6057
+Russia,Nizhny Novgorod,56.2965,43.9361
+Russia,Kazan,55.7887,49.1221
+Russia,Chelyabinsk,55.1544,61.4297
+Russia,Omsk,54.9885,73.3242
+Russia,Samara,53.1959,50.1001
+Russia,Rostov-on-Don,47.2357,39.7015
+Ukraine,Kiev,50.4501,30.5234
+Ukraine,Kharkiv,49.9935,36.2304
+Ukraine,Odessa,46.4825,30.7233
+Ukraine,Dnipro,48.4647,35.0462
+Ukraine,Donetsk,48.0159,37.8029
+Ukraine,Zaporizhzhya,47.8388,35.1396
+Ukraine,Lviv,49.8397,24.0297
+Ukraine,Kryvyy Rih,47.9101,33.3913
+Ukraine,Mykolayiv,46.9750,31.9946
+Ukraine,Mariupol,47.0971,37.5434
+United Kingdom,Aberdeen,57.1497,-2.0943
+United Kingdom,Blackburn,53.7475,-2.4835
+United Kingdom,Blackpool,53.8142,-3.0511
+United Kingdom,Bolton,53.5785,-2.4299
+United Kingdom,Bournemouth,50.7192,-1.8808
+United Kingdom,Bradford,53.7960,-1.7594
+United Kingdom,Brighton,50.8225,-0.1372
+United Kingdom,Cambridge,52.2053,0.1218
+United Kingdom,Colchester,51.8959,0.8919
+United Kingdom,Coventry,52.4068,-1.5197
+United Kingdom,Crawley,51.1125,-0.1877
+United Kingdom,Derby,52.9225,-1.4746
+United Kingdom,Dudley,52.5087,-2.0879
+United Kingdom,Dundee,56.4620,-2.9707
+United Kingdom,Eastbourne,50.7686,0.2905
+United Kingdom,Exeter,50.7184,-3.5339
+United Kingdom,Gloucester,51.8642,-2.2380
+United Kingdom,Huddersfield,53.6458,-1.7850
+United Kingdom,Ipswich,52.0567,1.1482
+United Kingdom,Kingston upon Hull,53.7676,-0.3274
+United Kingdom,Leicester,52.6369,-1.1398
+United Kingdom,Luton,51.8787,-0.4200
+United Kingdom,Middlesbrough,54.5742,-1.2350
+United Kingdom,Milton Keynes,52.0406,-0.7594
+United Kingdom,Northampton,52.2405,-0.9027
+United Kingdom,Norwich,52.6309,1.2974
+United Kingdom,Nottingham,52.9548,-1.1581
+United Kingdom,Oldham,53.5409,-2.1114
+United Kingdom,Oxford,51.7520,-1.2577
+United Kingdom,Peterborough,52.5695,-0.2405
+United Kingdom,Plymouth,50.3755,-4.1427
+United Kingdom,Poole,50.7175,-1.9874
+United Kingdom,Portsmouth,50.8198,-1.0879
+United Kingdom,Preston,53.7632,-2.7031
+United Kingdom,Reading,51.4543,-0.9781
+United Kingdom,Rotherham,53.4326,-1.3635
+United Kingdom,Sheffield,53.3811,-1.4701
+United Kingdom,Slough,51.5105,-0.5953
+United Kingdom,Southampton,50.9097,-1.4044
+United Kingdom,Southend-on-Sea,51.5459,0.7077
+United Kingdom,St Helens,53.4560,-2.7379
+United Kingdom,Stockport,53.4106,-2.1575
+United Kingdom,Stoke-on-Trent,53.0027,-2.1794
+United Kingdom,Sunderland,54.9060,-1.3834
+United Kingdom,Swansea,51.6214,-3.9436
+United Kingdom,Swindon,51.5558,-1.7797
+United Kingdom,Telford,52.6784,-2.4453
+United Kingdom,Walsall,52.5858,-1.9822
+United Kingdom,Watford,51.6565,-0.3903
+United Kingdom,West Bromwich,52.5192,-1.9945
+United Kingdom,Wolverhampton,52.5870,-2.1288
+United Kingdom,York,53.9599,-1.0873
+
+Belarus,Minsk,53.9045,27.5615
+Belarus,Brest,52.0975,23.6877
+Belarus,Homyel,52.4345,30.9754
+Belarus,Hrodna,53.6884,23.8258
+Belarus,Mahilyow,53.9168,30.3449
+Belarus,Vitsyebsk,55.1904,30.2049
+Moldova,Chișinău,47.0105,28.8638
+Moldova,Bălți,47.7631,27.9287
+Moldova,Bender,46.8316,29.4777
+Moldova,Tiraspol,46.8403,29.6433
+Italy,Bergamo,45.6983,9.6773
+Italy,Brescia,45.5416,10.2118
+Italy,Cagliari,39.2238,9.1217
+Italy,Catania,37.5079,15.0830
+Italy,Ferrara,44.8378,11.6194
+Italy,Foggia,41.4621,15.5444
+Italy,Forlì,44.2227,12.0407
+Italy,Latina,41.4666,12.9033
+Italy,Livorno,43.5485,10.3106
+Italy,Messina,38.1938,15.5540
+Italy,Modena,44.6471,10.9253
+Italy,Monza,45.5845,9.2744
+Italy,Padua,45.4064,11.8768
+Italy,Parma,44.8015,10.3279
+Italy,Perugia,43.1107,12.3908
+Italy,Pescara,42.4617,14.2160
+Italy,Prato,43.8777,11.1021
+Italy,Ravenna,44.4183,12.2030
+Italy,Reggio Calabria,38.1115,15.6466
+Italy,Reggio Emilia,44.6989,10.6312
+Italy,Salerno,40.6824,14.7681
+Italy,Siracusa,37.0755,15.2866
+Italy,Taranto,40.4647,17.2432
+Italy,Terni,42.5636,12.6428
+Italy,Trento,46.0748,11.1217
+Italy,Trieste,45.6495,13.7768
+Italy,Venezia,45.4408,12.3155
+Italy,Verona,45.4384,10.9916
+Italy,Vicenza,45.5455,11.5354
+Poland,Białystok,53.1325,23.1688
+Poland,Bielsko-Biała,49.8224,19.0584
+Poland,Bydgoszcz,53.1235,18.0084
+Poland,Bytom,50.3483,18.9160
+Poland,Chorzów,50.2974,18.9545
+Poland,Częstochowa,50.8118,19.1203
+Poland,Dąbrowa Górnicza,50.3227,19.1774
+Poland,Elbląg,54.1561,19.4044
+Poland,Gdynia,54.5189,18.5305
+Poland,Gliwice,50.2945,18.6714
+Poland,Gorzów Wielkopolski,52.7325,15.2369
+Poland,Kalisz,51.7577,18.0862
+Poland,Katowice,50.2649,19.0238
+Poland,Kielce,50.8661,20.6286
+Poland,Koszalin,54.1943,16.1714
+Poland,Legnica,51.2070,16.1619
+Poland,Lublin,51.2465,22.5684
+Poland,Olsztyn,53.7784,20.4801
+Poland,Opole,50.6751,17.9213
+Poland,Płock,52.5463,19.7065
+Poland,Radom,51.4027,21.1471
+Poland,Ruda Śląska,50.2558,18.8555
+Poland,Rybnik,50.0997,18.5461
+Poland,Rzeszów,50.0412,21.9991
+Poland,Słupsk,54.4641,17.0285
+Poland,Sosnowiec,50.2867,19.1040
+Poland,Tarnów,50.0121,20.9858
+Poland,Toruń,53.0138,18.5981
+Poland,Tychy,50.1307,18.9810
+Poland,Wałbrzych,50.7845,16.2845
+Poland,Włocławek,52.6483,19.0678
+Poland,Zabrze,50.3249,18.7857
+Poland,Zielona Góra,51.9356,15.5062
+Romania,Arad,46.1865,21.3122
+Romania,Bacău,46.5670,26.9150
+Romania,Baia Mare,47.6573,23.5689
+Romania,Botoșani,47.7487,26.6666
+Romania,Brăila,45.2692,27.9575
+Romania,Brașov,45.6427,25.5887
+Romania,Buzău,45.1500,26.8167
+Romania,Drobeta-Turnu Severin,44.6314,22.6597
+Romania,Galați,45.4353,28.0080
+Romania,Oradea,47.0465,21.9189
+Romania,Piatra Neamț,46.9257,26.3756
+Romania,Pitești,44.8563,24.8692
+Romania,Ploiești,44.9364,26.0179
+Romania,Râmnicu Vâlcea,45.1041,24.3675
+Romania,Satu Mare,47.7927,22.8867
+Romania,Sibiu,45.7983,24.1469
+Romania,Suceava,47.6635,26.2732
+Romania,Târgu Mureș,46.5430,24.5578
+
+Netherlands,Almere,52.3508,5.2647
+Netherlands,Amersfoort,52.1561,5.3878
+Netherlands,Apeldoorn,52.2112,5.9699
+Netherlands,Arnhem,51.9851,5.8987
+Netherlands,Breda,51.5719,4.7683
+Netherlands,Dordrecht,51.8133,4.6897
+Netherlands,Enschede,52.2215,6.8937
+Netherlands,Groningen,53.2194,6.5665
+Netherlands,Haarlem,52.3873,4.6462
+Netherlands,Leiden,52.1601,4.4970
+Netherlands,Maastricht,50.8514,5.6913
+Netherlands,Nijmegen,51.8426,5.8546
+Netherlands,Tilburg,51.5556,5.0875
+Netherlands,Zoetermeer,52.0574,4.4944
+Netherlands,Zwolle,52.5168,6.0830
+Spain,A Coruña,43.3713,-8.3959
+Spain,Alcalá de Henares,40.4820,-3.3636
+Spain,Alcorcón,40.3456,-3.8286
+Spain,Algeciras,36.1327,-5.4520
+Spain,Alicante,38.3452,-0.4815
+Spain,Badajoz,38.8794,-6.9706
+Spain,Badalona,41.4500,2.2500
+Spain,Burgos,42.3408,-3.7020
+Spain,Cádiz,36.5297,-6.2929
+Spain,Cartagena,37.6257,-0.9967
+Spain,Castellón de la Plana,39.9859,-0.0377
+Spain,Córdoba,37.8882,-4.7794
+Spain,Donostia-San Sebastián,43.3183,-1.9812
+Spain,Fuenlabrada,40.2837,-3.7934
+Spain,Getafe,40.3048,-3.7312
+Spain,Gijón,43.5293,-5.6773
+Spain,Granada,37.1773,-3.5986
+Spain,Huelva,37.2571,-6.9497
+Spain,Jaén,37.7796,-3.7849
+Spain,Jerez de la Frontera,36.6862,-6.1396
+Spain,Leganés,40.3270,-3.7635
+Spain,León,42.5987,-5.5671
+Spain,L'Hospitalet,41.3598,2.0997
+Spain,Lleida,41.6176,0.6200
+Spain,Logroño,42.4663,-2.4459
+Spain,Marbella,36.5154,-4.8857
+Spain,Mataró,41.5400,2.4447
+Spain,Móstoles,40.3227,-3.8658
+Spain,Ourense,42.3364,-7.8633
+Spain,Oviedo,43.3603,-5.8448
+Spain,Palma de Mallorca,39.5696,2.6502
+Spain,Pamplona,42.8125,-1.6458
+Spain,Sabadell,41.5431,2.1047
+Spain,Salamanca,40.9701,-5.6635
+Spain,Santa Coloma de Gramenet,41.4500,2.2167
+Spain,Santander,43.4628,-3.8037
+Spain,Tarragona,41.1187,1.2453
+Spain,Terrassa,41.5608,2.0081
+Spain,Torrejón de Ardoz,40.4589,-3.4797
+Russia,Achinsk,56.2694,90.4993
+Russia,Angarsk,52.5438,103.8881
+Russia,Arkhangelsk,64.5401,40.5433
+Russia,Astrakhan,46.3497,48.0408
+Russia,Barnaul,53.3548,83.7697
+Russia,Vladivostok,43.1198,131.8869
+Russia,Volgograd,48.7080,44.5133
+Russia,Voronezh,51.6720,39.1843
+Russia,Yakutsk,62.0355,129.6755
+Russia,Yaroslavl,57.6299,39.8737
+Russia,Izhevsk,56.8498,53.2045
+Russia,Irkutsk,52.2870,104.3050
+Russia,Kemerovo,55.3333,86.0833
+Russia,Kirov,58.6035,49.6668
+Russia,Krasnodar,45.0448,38.9687
+Russia,Krasnoyarsk,56.0090,92.8719
+Russia,Kursk,51.7373,36.1874
+Russia,Lipetsk,52.6031,39.5708
+Russia,Makhachkala,42.9783,47.5022
+Russia,Murmansk,68.9585,33.0827
+Russia,Naberezhnye Chelny,55.7437,52.3959
+Russia,Nizhny Tagil,57.9194,59.9652
+Russia,Novokuznetsk,53.7557,87.1099
+Russia,Novorossiysk,44.7244,37.7675
+Russia,Orenburg,51.7727,55.1007
+Russia,Penza,53.2006,45.0046
+Russia,Perm,58.0105,56.2502
+Russia,Ryazan,54.6269,39.6916
+Russia,Saratov,51.5330,46.0344
+Russia,Sochi,43.6028,39.7342
+Russia,Stavropol,45.0428,41.9734
+Russia,Tambov,52.7317,41.4433
+Russia,Tver,56.8587,35.9176
+Russia,Tomsk,56.4977,84.9744
+Russia,Tula,54.1961,37.6182
+Russia,Tyumen,57.1522,65.5272
+Russia,Ufa,54.7348,55.9578
+Russia,Khabarovsk,48.4827,135.0846
+Russia,Cheboksary,56.1322,47.2519
+Russia,Cherepovets,59.1275,37.9053
+Russia,Kaliningrad,54.7104,20.4522
+Ukraine,Cherkasy,49.4444,32.0597
+Ukraine,Chernihiv,51.4982,31.2893
+Ukraine,Chernivtsi,48.2920,25.9358
+Ukraine,Horlivka,48.3071,38.0294
+Ukraine,Ivano-Frankivsk,48.9226,24.7111
+Ukraine,Kherson,46.6354,32.6169
+Ukraine,Khmelnytskyi,49.4220,26.9879
+Ukraine,Kirovohrad,48.5079,32.2623
+Ukraine,Kramatorsk,48.7208,37.5555
+Ukraine,Kremenchuk,49.0657,33.4103
+Ukraine,Luhansk,48.5740,39.3075
+Ukraine,Lutsk,50.7472,25.3254
+Ukraine,Poltava,49.5883,34.5514
+Ukraine,Rivne,50.6196,26.2513
+Ukraine,Sevastopol,44.6166,33.5254
+Ukraine,Simferopol,44.9572,34.1108
+Ukraine,Sumy,50.9077,34.7981
+Ukraine,Ternopil,49.5535,25.5948
+Ukraine,Vinnytsia,49.2328,28.4817
+Ukraine,Zhytomyr,50.2649,28.6767
+
+Portugal,Agualva-Cacém,38.7687,-9.2987
+Portugal,Almada,38.6803,-9.1583
+Portugal,Amadora,38.7578,-9.2245
+Portugal,Vila Nova de Gaia,41.1333,-8.6167
+Greece,Kallithea,37.9507,23.7087
+Greece,Peristeri,38.0167,23.6917
+Kosovo,Mitrovicë,42.8833,20.8667
+Kosovo,Pristina,42.6667,21.1667
+Kosovo,Prizren,42.2167,20.7417
+Lithuania,Panevėžys,55.7333,24.3500
+Lithuania,Šiauliai,55.9333,23.3167
+Macedonia,Kumanovo,42.1322,21.7144
+Macedonia,Skopje,41.9965,21.4314
+Montenegro,Podgorica,42.4411,19.2636
+Serbia,Kragujevac,44.0167,20.9167
+Serbia,Zemun,44.8500,20.4000
+Serbia,Čačak,43.8914,20.3497
+Finland,Jyväskylä,62.2415,25.7209
+Sweden,Linköping,58.4167,15.6167
+Sweden,Uppsala,59.8581,17.6446
+Sweden,Västerås,59.6167,16.5500
+Denmark,Aalborg,57.0488,9.9217
+Denmark,Aarhus,56.1572,10.2107
+Denmark,Odense,55.4038,10.4024
+Belgium,Charleroi,50.4108,4.4446
+Belgium,Liège,50.6326,5.5797
+Belgium,Namur,50.4650,4.8650
+Austria,Salzburg,47.8095,13.0550
+Czech Republic,Liberec,50.7663,15.0543
+Czech Republic,Olomouc,49.5938,17.2508
+Czech Republic,Pilsen,49.7475,13.3776
+Slovakia,Košice,48.7164,21.2611
+Croatia,Rijeka,45.3271,14.4422
+Bosnia and Herzegovina,Tuzla,44.5375,18.6735
+Bosnia and Herzegovina,Zenica,44.2017,17.9040
+Albania,Durrës,41.3233,19.4412
+Albania,Elbasan,41.1125,20.0822
+Bulgaria,Pleven,43.4167,24.6167
+Bulgaria,Stara Zagora,42.4250,25.6250
+Russia,Balakovo,52.0278,47.8007
+Russia,Bryansk,53.2521,34.3717
+Russia,Dzerzhinsk,56.2389,43.4631
+Russia,Ivanovo,57.0000,40.9733
+Russia,Kaluga,54.5293,36.2754
+Russia,Kostroma,57.7667,40.9167
+Russia,Kurgan,55.4408,65.3411
+Russia,Magnitogorsk,53.4186,58.9795
+Russia,Nizhnevartovsk,60.9344,76.5531
+Russia,Norilsk,69.3535,88.2027
+Russia,Novocherkassk,47.4222,40.0939
+Russia,Orsk,51.2049,58.5668
+Russia,Sterlitamak,53.6333,55.9500
+Russia,Taganrog,47.2362,38.8969
+Russia,Volzhskiy,48.7833,44.7667
+Ukraine,Bila Tserkva,49.7956,30.1167
+Ukraine,Kamianske,48.5078,34.6274
+Ukraine,Kerch,45.3619,36.4750
+Ukraine,Lysychansk,48.9000,38.4333
+Ukraine,Melitopol,46.8333,35.3833
+Ukraine,Nikopol,47.5667,34.4000
+Ukraine,Pavlohrad,48.5167,35.8667
+Ukraine,Sloviansk,48.8667,37.6167
+Ukraine,Syevyerodonetsk,48.9500,38.4833
+Ukraine,Uzhhorod,48.6167,22.3000
+Ukraine,Yenakiieve,48.2333,38.2167
+Ukraine,Yevpatoria,45.2000,33.3583
+Netherlands,Doetinchem,51.9650,6.2890
+France,Perpignan,42.6986,2.8956
+France,Rouen,49.4431,1.0993
+France,Tours,47.3941,0.6848
+Germany,Cottbus,51.7567,14.3349
+Germany,Jena,50.9272,11.5892
+Germany,Wolfsburg,52.4227,10.7872
+Italy,Latina,41.4666,12.9033
+Italy,Prato,43.8777,11.1021
+Italy,Taranto,40.4647,17.2432
+Poland,Bytom,50.3483,18.9160
+Poland,Gliwice,50.2945,18.6714
+Poland,Zabrze,50.3249,18.7857
+Romania,Arad,46.1865,21.3122
+Romania,Pitești,44.8563,24.8692
+Romania,Sibiu,45.7983,24.1469
+
+Sweden,Helsingborg,56.0465,12.6942
+Sweden,Norrköping,58.5953,16.1789
+Sweden,Örebro,59.2753,15.2134
+Sweden,Umeå,63.8258,20.2630
+Finland,Kuopio,62.8924,27.6770
+Finland,Pori,61.4851,21.7974
+Finland,Vaasa,63.0960,21.6157
+Denmark,Esbjerg,55.4678,8.4525
+Denmark,Frederiksberg,55.6761,12.5385
+Denmark,Randers,56.4607,10.0364
+Denmark,Vejle,55.7090,9.5357
+Norway,Bergen,60.3913,5.3221
+Norway,Drammen,59.7439,10.2045
+Norway,Kristiansand,58.1599,8.0182
+Norway,Stavanger,58.9700,5.7331
+Norway,Tromsø,69.6489,18.9551
+Norway,Trondheim,63.4305,10.3951
+Ireland,Galway,53.2707,-9.0568
+Ireland,Limerick,52.6680,-8.6305
+Ireland,Waterford,52.2583,-7.1119
+Netherlands,Deventer,52.2554,6.1544
+Netherlands,Ede,52.0401,5.6717
+Netherlands,Wageningen,51.9812,5.6584
+Netherlands,Emmen,52.7792,6.9042
+Netherlands,Heerlen,50.8881,5.9795
+Netherlands,Hilversum,52.2317,5.1717
+Switzerland,Lugano,46.0037,8.9511
+Switzerland,St. Gallen,47.4244,9.3767
+Switzerland,Winterthur,47.5000,8.7500
+Belgium,Aalst,50.9378,4.0409
+Belgium,Kortrijk,50.8285,3.2649
+Belgium,Leuven,50.8796,4.7009
+Belgium,Mechelen,51.0259,4.4776
+Belgium,Ostend,51.2154,2.9287
+Luxembourg,Luxembourg City,49.6116,6.1319
+France,Antibes,43.5822,7.1231
+France,Cannes,43.5513,7.0128
+France,Chambéry,45.5667,5.9333
+France,Cholet,47.0667,-0.8833
+France,Colmar,48.0794,7.3585
+France,La Rochelle,46.1591,-1.1520
+France,Lorient,47.7486,-3.3669
+France,Poitiers,46.5802,0.3404
+France,Saint-Nazaire,47.2803,-2.2145
+France,Troyes,48.2973,4.0744
+France,Valence,44.9333,4.8922
+Spain,Albacete,39.0000,-1.8713
+Spain,Almería,36.8381,-2.4597
+Spain,Cáceres,39.4735,-6.3722
+Spain,Castelló,39.9852,-0.0495
+Spain,Ciudad Real,38.9861,-3.9272
+Spain,Cuenca,40.0718,-2.1343
+Spain,Guadalajara,40.6337,-3.1683
+Spain,Huesca,42.1362,-0.4087
+Spain,Lugo,43.0120,-7.5567
+Spain,Melilla,35.2923,-2.9381
+Spain,Palencia,42.0121,-4.5336
+Spain,Pontevedra,42.4338,-8.6483
+Spain,Segovia,40.9429,-4.1088
+Spain,Soria,41.7636,-2.4649
+Spain,Toledo,39.8628,-4.0273
+Spain,Zamora,41.5036,-5.7467
+Italy,Alessandria,44.9133,8.6158
+Italy,Ascoli Piceno,42.8537,13.5767
+Italy,Asti,44.9015,8.2068
+Italy,Benevento,41.1307,14.7828
+Italy,Brindisi,40.6381,17.9375
+Italy,Campobasso,41.5603,14.6627
+Italy,Catanzaro,38.9097,16.5877
+Italy,Cosenza,39.2974,16.2539
+Italy,Cremona,45.1332,10.0251
+Italy,Cuneo,44.3833,7.5500
+Italy,Grosseto,42.7635,11.1124
+Italy,Lecce,40.3516,18.1718
+Italy,Lecco,45.8563,9.3977
+Italy,Lucca,43.8430,10.5027
+Italy,Mantova,45.1564,10.7913
+Italy,Massa,44.0374,10.1412
+Italy,Matera,40.6667,16.6000
+Italy,Novara,45.4467,8.6214
+Italy,Pesaro,43.9098,12.9131
+Italy,Pistoia,43.9303,10.9167
+Italy,Potenza,40.6403,15.8089
+Italy,Ragusa,36.9280,14.7283
+Italy,Rimini,44.0594,12.5733
+Italy,Savona,44.3075,8.4810
+Italy,Siena,43.3186,11.3306
+Italy,Trapani,38.0174,12.5365
+Italy,Udine,46.0642,13.2360
+Italy,Varese,45.8183,8.8260
+Italy,Viterbo,42.4171,12.1056

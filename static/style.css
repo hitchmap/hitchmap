@@ -62,6 +62,9 @@ input[type=radio] + label {
     padding: 5px;
     margin-top: 24px;
 }
+.no-margin-bottom {
+    margin-bottom: 0 !important;
+}
 #sb-close {
     display: none;
 }

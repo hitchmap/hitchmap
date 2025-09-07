@@ -25,6 +25,13 @@ The software provided in this repository is licensed under AGPL 3.0. The Hitchma
 
 ## Installation (on Linux)
 
+Docker 
+
+```
+docker build -t hitchmap .
+docker run -p 5000:5000 hitchmap
+```
+
 Install Python and Node.js, then:
 
 ```bash

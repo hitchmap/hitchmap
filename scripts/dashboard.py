@@ -2,9 +2,11 @@ import html
 import os
 import sqlite3
 from string import Template
+from datetime import datetime, timedelta
 
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 
 # see
 # https://realpython.com/python-dash/
@@ -39,9 +41,52 @@ df = pd.read_sql(
 
 df["datetime"] = df["datetime"].astype("datetime64[ns]")
 
-hist_data = df["datetime"]
-fig = px.histogram(df["datetime"], title="Entries per month")
+# Calculate expected entries for current month
+now = pd.Timestamp.now()
+current_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+current_month_entries = df[df["datetime"] >= current_month_start]
+days_in_current_month = (now.replace(month=now.month % 12 + 1, day=1) - current_month_start).days
+days_passed = (now - current_month_start).days + 1
+expected_monthly_entries = len(current_month_entries) * days_in_current_month / days_passed
 
+# Create histogram with 1-month bins
+fig = px.histogram(df["datetime"], title="Entries per month", nbins=None)
+
+# Set the histogram to use monthly bins
+fig.update_traces(
+    xbins=dict(
+        size="M1"  # 1 month bins
+    ),
+    hovertemplate="<b>%{x|%b %Y}</b><br>Entries: %{y}<extra></extra>",
+)
+
+# Add expected value annotation for current month
+fig.add_annotation(
+    x=current_month_start + pd.Timedelta(days=15),  # Middle of current month
+    y=expected_monthly_entries,
+    text=f"Expected: {expected_monthly_entries:.0f}",
+    showarrow=True,
+    arrowhead=2,
+    arrowsize=1,
+    arrowwidth=2,
+    arrowcolor="red",
+    font=dict(color="red", size=12),
+    bgcolor="rgba(255,255,255,0.8)",
+    bordercolor="red",
+    borderwidth=1,
+)
+
+# Add a trace for expected value
+fig.add_trace(
+    go.Scatter(
+        x=[current_month_start + pd.Timedelta(days=15)],
+        y=[expected_monthly_entries],
+        mode="markers",
+        marker=dict(color="red", size=8, symbol="diamond"),
+        name=f"Expected this month ({expected_monthly_entries:.0f})",
+        showlegend=True,
+    )
+)
 
 fig.update_xaxes(
     range=[
@@ -51,8 +96,6 @@ fig.update_xaxes(
     rangeselector=dict(
         buttons=list(
             [
-                dict(count=1, label="1m", step="month", stepmode="backward"),
-                dict(count=6, label="6m", step="month", stepmode="backward"),
                 dict(count=1, label="1y", step="year", stepmode="backward"),
                 dict(count=2, label="2y", step="year", stepmode="backward"),
                 dict(count=5, label="5y", step="year", stepmode="backward"),
@@ -63,54 +106,13 @@ fig.update_xaxes(
     ),
 )
 
-fig.update_layout(showlegend=False)
 fig.update_layout(xaxis_title=None)
 fig.update_layout(yaxis_title="# of entries")
-
 
 timeline_plot = fig.to_html("dash.html", full_html=False)
 
-# Duplicates
-df = pd.read_sql(
-    "select * from duplicates",
-    sqlite3.connect(DATABASE),
-)
 
-df["datetime"] = df["datetime"].astype("datetime64[ns]")
-
-hist_data = df["datetime"]
-fig = px.histogram(df["datetime"], title="Entries per month")
-
-
-fig.update_xaxes(
-    range=[
-        "2024-06-01",
-        pd.Timestamp.today().strftime("%Y-%m-%d"),
-    ],
-    rangeselector=dict(
-        buttons=list(
-            [
-                dict(count=1, label="1m", step="month", stepmode="backward"),
-                dict(count=6, label="6m", step="month", stepmode="backward"),
-                dict(count=1, label="1y", step="year", stepmode="backward"),
-                dict(count=2, label="2y", step="year", stepmode="backward"),
-                dict(count=5, label="5y", step="year", stepmode="backward"),
-                dict(count=10, label="10y", step="year", stepmode="backward"),
-                dict(step="all"),
-            ]
-        )
-    ),
-)
-
-fig.update_layout(showlegend=False)
-fig.update_layout(xaxis_title=None)
-fig.update_layout(yaxis_title="# of entries")
-
-
-timeline_plot_duplicate = fig.to_html("dash.html", full_html=False)
-
-
-# TODO: necessary to track user prgress, move elsewhere later
+# TODO: necessary to track user progress, move elsewhere later
 ### Show accounts ###
 def e(s):
     return html.escape(s.replace("\n", "<br>"))
@@ -151,7 +153,6 @@ user_accounts += f"<br>There are {count_inactive_users} inactive users"
 output = Template(template).substitute(
     {
         "timeline": timeline_plot,
-        "timeline_duplicate": timeline_plot_duplicate,
         "user_accounts": user_accounts,
     }
 )

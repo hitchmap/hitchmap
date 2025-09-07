@@ -49,7 +49,7 @@
                 <input id="datetime_ride" type="datetime-local" name="datetime_ride" min="2000-01-01T00:00:00">
                 <!-- maximum date is today -->
                 <script>
-                    document.getElementById("datetime_ride").max = (new Date().toISOString().slice(0,11)) + "23:59";
+                 document.getElementById("datetime_ride").max = (new Date().toISOString().slice(0,11)) + "23:59";
                 </script>
             </details>
             <button>Submit</button>
@@ -58,9 +58,10 @@
     <div class="sidebar show-spot spot">
         <h3 id="spot-header"><a target="_blank"></a></h3>
         <div id='spot-summary'></div>
+        <div><button class="no-margin-bottom">Review this spot</button></div>
         <h4>Comments</h4>
         <div id='spot-text'></div>
-        <div><button>Review this spot</button></div>
+        <div id="extra-review-button"><button>Review this spot</button></div>
         <i id="extra-text"></i>
         <hr>
     </div>
