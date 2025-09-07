@@ -64,8 +64,8 @@ class CountrySelectField(SelectField):
 
 class UserEditForm(FlaskForm):
     make_public = BooleanField(
-        """I'd like to add all provided usernames, my gender, year of birth, hometown,
-and "Hitchhiking Since" to Hitchmap's public dataset.
+        """I'd like to add the following personal data to Hitchmap's public dataset: my gender, year of birth, hometown, all of my usernames,
+and "Hitchhiking Since".
 I understand that while this data is published for scientific research on hitchhiking,
 anyone can download this data from Hitchmap's main menu if I check this box.""",
         default=False,
