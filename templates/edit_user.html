@@ -3,7 +3,10 @@
 {% block content %}
 <h1>Edit your personal data </h1> 
 <form method="POST" action="{{ url_for('form') }}"> 
-    {{ form.csrf_token }} 
+    {{ form.csrf_token }}
+    <div style="background-color: #f5f5f5; border-radius: 8px; padding: 8px; font-size: 0.8em;">
+        <p style="display: flex; align-items: baseline; gap: 12px;">{{ form.make_public() }} {{ form.make_public.label }}</p>
+    </div>
     <p>{{ form.gender.label }} {{ form.gender() }}</p> 
     <p>{{ form.year_of_birth.label }} {{ form.year_of_birth() }}</p>
     <p>{{ form.hitchhiking_since.label }} {{ form.hitchhiking_since() }}</p>
@@ -11,10 +14,8 @@
     <p>{{ form.origin_city.label }} {{ form.origin_city() }}</p>
     <p>{{ form.hitchwiki_username.label }} {{ form.hitchwiki_username() }}</p>
     <p>{{ form.trustroots_username.label }} {{ form.trustroots_username() }}</p>
-    <br><br>
-    <p>Pay attention to our <a href="https://github.com/bopjesvla/hitch/blob/master/PRIVACY_POLICY.md">Privacy Policy.</a></p>
+    <p>Pay attention to our <a style="display: inline;" href="https://github.com/bopjesvla/hitch/blob/master/PRIVACY_POLICY.md">Privacy Policy.</a></p>
     <p>This personal information will be shown publicly.</p>
-    <br>
     {{ form.submit }} 
 </form>
 {% endblock %}

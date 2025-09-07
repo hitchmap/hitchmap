@@ -5,7 +5,7 @@ from flask_security import Security, SQLAlchemyUserDatastore, current_user, util
 from flask_security.models import fsqla_v3 as fsqla
 from flask_security.views import forgot_password
 from flask_wtf import FlaskForm
-from wtforms import IntegerField, SelectField, StringField, SubmitField
+from wtforms import IntegerField, SelectField, StringField, SubmitField, BooleanField
 from wtforms.validators import Optional
 from wtforms.widgets import NumberInput
 from sqlalchemy import text
@@ -46,6 +46,7 @@ class Role(db.Model, fsqla.FsRoleMixin):
 
 
 class User(db.Model, fsqla.FsUserMixin):
+    make_public = db.Column(db.Boolean, default=False)
     gender = db.Column(db.String(255), default=None)
     year_of_birth = db.Column(db.Integer, default=None)
     hitchhiking_since = db.Column(db.Integer, default=None)
@@ -62,6 +63,13 @@ class CountrySelectField(SelectField):
 
 
 class UserEditForm(FlaskForm):
+    make_public = BooleanField(
+        """I'd like to add the following personal data to Hitchmap's public dataset: my gender, year of birth, hometown, all of my usernames,
+and "Hitchhiking Since".
+I understand that while this data is published for scientific research on hitchhiking,
+anyone can download this data from Hitchmap's main menu if I check this box.""",
+        default=False,
+    )
     gender = SelectField(
         "Gender",
         choices=[
@@ -149,6 +157,7 @@ def form():
 
     if form.validate_on_submit():
         updated_user = security.datastore.find_user(case_insensitive=True, username=current_user.username)
+        updated_user.make_public = form.make_public.data
         updated_user.gender = form.gender.data
         updated_user.year_of_birth = form.year_of_birth.data
         updated_user.hitchhiking_since = form.hitchhiking_since.data
@@ -160,6 +169,7 @@ def form():
         security.datastore.commit()
         return redirect("/me")
 
+    form.make_public.data = current_user.make_public
     form.gender.data = current_user.gender
     form.year_of_birth.data = current_user.year_of_birth
     form.hitchhiking_since.data = current_user.hitchhiking_since
