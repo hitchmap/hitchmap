@@ -435,3 +435,16 @@ ul.no-style {
 body.filtering .remove-filter-group {
     display: block;
 }
+
+#ask-register-container {
+    background-color: #ffdddd;
+    padding: 10px;
+    border: 1px solid #ff8888;
+    color: #a94442;
+    margin-bottom: 10px;
+    font-size: 1em;
+}
+#ask-register-container a {
+    color: #a94442;
+    text-decoration: underline;
+}

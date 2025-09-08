@@ -3,6 +3,10 @@
 {% block content %}
     <div class="sidebar spot-form-container">
         <h3>New Review</h3>
+        <div id="ask-register-container">
+            To keep track of your reviews, <a href="/login">log in</a> or <a href="/register">register</a>.
+            <br>
+        </div>
         <p class=greyed></p>
         <form id=spot-form action=experience method=post>
             <input type="hidden" name="coords">
@@ -30,8 +34,6 @@
                 <label for="nickname-input">Public nickname (alphanumeric)</label>
                 <input id="nickname-input" name="nickname" maxlength="32" pattern="[a-zA-Z0-9]*">
                 <span id="nickname-error-message" class="error"></span>
-                <br>
-                <div><small>To keep track of your reviews, <a href="/login">log in</a> or <a href="/register">register</a>. This will reset the review above.</small></div>
             </div>
             <br>
             <details closed id="extended_info">
