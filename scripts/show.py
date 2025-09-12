@@ -22,12 +22,15 @@ service_template = env.get_template("service_template.html")  # Load template fi
 service_index = env.get_template("service_index.html")  # Load template file
 city_index = env.get_template("city_index.html")  # Load template file
 city_template = env.get_template("city_template.html")  # Load template file
+country_index = env.get_template("country_index.html")  # Load template file
+country_template = env.get_template("country_template.html")  # Load template file
 
 os.makedirs(dist_dir, exist_ok=True)
 
 LIGHT = "light" in sys.argv
 SERVICE_AREAS = "service" in sys.argv
 CITIES = "city" in sys.argv
+COUNTRIES = "country" in sys.argv
 
 outname = os.path.join(dist_dir, "light.html") if LIGHT else os.path.join(dist_dir, "index.html")
 
@@ -219,9 +222,7 @@ places["review_count"] = groups.size()
 
 # to prevent confusion, only add a review user if they have a text written
 places["reviews"] = (
-    points.dropna(subset=["text", "hitchhiker"])
-    .groupby("cluster_id")
-    .apply(lambda g: list(zip(g.hitchhiker, g.ride_datetime)))
+    points.dropna(subset=["text", "hitchhiker"]).groupby("cluster_id").apply(lambda g: list(zip(g.hitchhiker, g.ride_datetime)))
 )
 
 places["dest_lats"] = points.dropna(subset=["dest_lat", "dest_lon"]).groupby("cluster_id").dest_lat.apply(list)
@@ -268,6 +269,30 @@ elif CITIES:
 
     index_rendered = city_index.render(grouped_cities=cities[rendered_cities].groupby("country"))
     with open(os.path.join(os.path.join(dist_dir, "city"), "index.html"), "w") as f:
+        f.write(index_rendered)
+elif COUNTRIES:
+    points.sort_values("datetime", inplace=True, ascending=False)
+    countries = pd.read_csv(os.path.join(db_dir, "countries.csv")).drop_duplicates().sort_values("country")
+    rendered_countries = []
+    country_folder = os.path.join(dist_dir, "country")
+    os.makedirs(country_folder, exist_ok=True)
+
+    for country in countries.itertuples():
+        pattern = rf"\b{country.name}\b"
+        mention_reviews = (
+            points[points.text.str.contains(pattern, case=False, regex=True).astype(bool)].dropna(subset="comment").iloc[:20]
+        )
+        country_reviews = points[points.country == country.country].dropna(subset="comment").iloc[:20]
+        rendered_countries.append(len(mention_reviews) >= 3)
+        if rendered_countries[-1]:
+            rendered = country_template.render(
+                country=country, title=country.country, mention_reviews=mention_reviews, country_reviews=country_reviews
+            )
+            with open(os.path.join(country_folder, f"{country.name}.html"), "w") as f:
+                f.write(rendered)
+    print(rendered_countries)
+    index_rendered = country_index.render(countries=countries[rendered_countries])
+    with open(os.path.join(country_folder, "index.html"), "w") as f:
         f.write(index_rendered)
 
 
