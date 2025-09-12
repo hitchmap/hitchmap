@@ -3,6 +3,8 @@
 * * * * * cd hitch && /usr/bin/flock -n /tmp/show.lockfile bash -c '. $HOME/.bashrc; /home/bob/.asdf/shims/python scripts/show.py' > cronlog.txt 2>&1
 # every 10 minutes
 */10 * * * * cd hitch && /usr/bin/flock -n /tmp/show.lockfile bash -c '. $HOME/.bashrc; /home/bob/.asdf/shims/python scripts/show.py light' > cronlog-light.txt 2>&1
+# each day at 4
+0 4 * * * cd hitch && bash -c '. $HOME/.bashrc; /home/bob/.asdf/shims/python scripts/show.py city; /home/bob/.asdf/shims/python scripts/show.py country; /home/bob/.asdf/shims/python scripts/show.py service;' > guidelog.txt 2>&1
 # each day at 6
 0 6 * * * cd hitch && bash -c '. $HOME/.bashrc; /home/bob/.asdf/shims/python scripts/dump.py' > dumplog.txt 2>&1
 # each day at 3
