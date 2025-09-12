@@ -1,0 +1,13 @@
+<!-- country_index.html -->
+{% extends "security/base.html" %}
+{% block title %}
+Hitchhiking tips for countries
+{% endblock %}
+{% block content %}
+<h1>Hitchhiking guides to countries</h1>
+<ul>
+    {% for country in countries.itertuples() %}
+    <li><a href="{{ country.name }}.html">{{ country.name }}</a></li>
+    {% endfor %}
+</ul>
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends "security/base.html" %}
+{% block title %}
+{{title}} - Hitchhiking - Hitchmap
+{% endblock %}
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <nav><br><a href="/country/index.html" id="back">&lt; All countries</a><br></nav>
+        <article class="mt-6">
+            <h2>Hitchhiking in {{country.name}}</h2>
+            <a class="map-link" href="/#location,{{country.lat}},{{country.lon}},7"><div id="static-map"></div><span class="map-overlay">{{country.name}} on Hitchmap</span> </a>
+            <h2>Hitchhiking to {{country.name}}</h2>
+            <a class="map-link" href="/?text={{country.name}}#location,{{country.lat}},{{country.lon}},5"><div id="static-map-zoomed-out"></div><span class="map-overlay">View all spots mentioning {{country.name}}</span> </a>
+            <h3>Recent reviews in {{country.name}}</h3>
+            {% for review in country_reviews.itertuples() %}
+            <h4><a href="/#{{ review.lat }},{{review.lon}}">{{ review.lat | round(5) }}, {{review.lon | round(5) }}</a></h4>
+            {{ review.text | safe }}
+            <hr/>
+            {% endfor %}
+            <h3>Recent reviews mentioning {{country.name}}</h3>
+            {% for review in mention_reviews.itertuples() %}
+            <h4><a href="/#{{ review.lat }},{{review.lon}}">{{ review.lat | round(5) }}, {{review.lon | round(5) }}</a></h4>
+            {{ review.text | safe }}
+            <hr/>
+            {% endfor %}
+        </article>
+    </div>
+    <br>
+    <small>&copy; <a id="copyright" href="/copyright.html">Hitchmap</a> contributors</small>
+</div>
+<style>
+ .font-semibold {
+     font-weight: bold;
+ }
+ #copyright {
+     display: inline;
+ }
+ .overlay {
+     max-width: 600px;
+     padding-top: 40px;
+ }
+ .comment {
+     white-space: pre-line;
+ }
+ article a {
+     display: inline;
+ }
+ hr {
+     margin-top: 20px;
+     margin-bottom: 20px;
+     border: 0;
+     border-top-width: 0px;
+     border-top-style: none;
+     border-top-color: currentcolor;
+     border-top: 1px solid #eee;
+ }
+ .map-link {
+     position: relative;
+     display: inline-block;
+     text-decoration: none;
+ }
+ .map-overlay {
+     position: absolute;
+     top: 0;
+     left: 0;
+     width: 100%;
+     height: 100%;
+     background: rgba(0, 0, 0, 0.5);
+     color: white;
+     font-size: 1.2em;
+     font-weight: bold;
+     text-align: center;
+     display: flex;
+     align-items: center;
+     justify-content: center;
+     font-family: sans-serif;
+ }
+</style>
+<script>
+ document.querySelector('.bg').href = '/#location,{{country.lat}},{{country.lon}},{{country.zoom}}'
+ function createStaticMap(mapContainer, lat, lon, zoom, width, height) {const TILE_SIZE = 256; const centerX = ((lon + 180) / 360) * Math.pow(2, zoom) * 256; const centerY = ((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2) * Math.pow(2, zoom) * 256; const topLeftX = centerX - width / 2, topLeftY = centerY - height / 2; const startTileX = Math.floor(topLeftX / 256), startTileY = Math.floor(topLeftY / 256); const xOffset = -(topLeftX % 256), yOffset = -(topLeftY % 256); const xTiles = Math.ceil(width / 256) + 1, yTiles = Math.ceil(height / 256) + 1; mapContainer.style.cssText = `width:${width}px;height:${height}px;position:relative;overflow:hidden`; for (let x = 0; x < xTiles; x++) {for (let y = 0; y < yTiles; y++) {const img = document.createElement("img"); img.src = `https://tile.openstreetmap.org/${zoom}/${startTileX + x}/${startTileY + y}.png`; img.style.cssText = `position:absolute;width:${256}px;height:${256}px;left:${(x * 256) + xOffset}px;top:${(y * 256) + yOffset}px`; mapContainer.appendChild(img);}}}
+ let container = document.querySelector('#static-map')
+ createStaticMap(container, {{country.lat}}, {{country.lon}}, {{country.zoom}}, Math.min(600, window.innerWidth - 40), 300);
+ let containerZoomedOut = document.querySelector('#static-map-zoomed-out')
+ createStaticMap(containerZoomedOut, {{country.lat}}, {{country.lon}}, {{country.zoom-1}}, Math.min(600, window.innerWidth - 40), 300);
+</script>
+{% endblock %}
