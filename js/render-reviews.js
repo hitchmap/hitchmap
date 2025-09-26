@@ -45,6 +45,8 @@ export function renderReviews(reviews) {
         if (metaEl.children.length > 0 && review[C.DATETIME] > +new Date('2021')) {
             reviewElement.appendChild(metaEl);
         }
+
+        if (!reviewElement.firstChild) return
         
         // Render author and datetime
         const authorDateTimeEl = document.createElement('div');
