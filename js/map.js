@@ -351,20 +351,20 @@ bars.forEach(bar => {
     if (bar.classList.contains('spot')) bar.onclick = addSpotStep
 })
 
-// Map click handler for mobile optimization
+// Map click handler for mobile misclicks
 map.on('click', e => {
-    var added = false;
+    var opened = false;
 
     if (!document.body.classList.contains('zoomed-out') && window.innerWidth < 780) {
         var layerPoint = map.latLngToLayerPoint(e.latlng)
         let markers = document.body.classList.contains('filtering') ? filterMarkerGroup.getLayers() : allMarkers
         var closest = closestMarker(markers, e.latlng.lat, e.latlng.lng)
         if (closest && map.latLngToLayerPoint(closest.getLatLng()).distanceTo(layerPoint) < 20) {
-            added = true
+            opened = true
             closest.fire('click', e)
         }
     }
-    if (!added && $$('.sidebar.visible') && !$$('.sidebar.spot-form-container.visible')) {
+    if (!opened && $$('.sidebar.visible') && !$$('.sidebar.spot-form-container.visible')) {
         navigateHome()
     }
 

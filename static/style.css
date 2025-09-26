@@ -257,6 +257,9 @@ a:hover {
     padding: 0px;
     font-size: 1.2em;
 }
+body.adding-spot .leaflet-control-geocoder-form {
+    display: inline-block !important;
+}
 
 /* 
 optional section for recording spot data 
