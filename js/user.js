@@ -19,7 +19,7 @@ export function createUserMarkers(markers) {
     if (!currentUser) return
     userMarkerGroup.clearLayers()
     let userMarkers = window.reviewData.filter(
-        review => review[C.HITCHHIKER].toLowerCase() == currentUser.toLowerCase()
+        review => review[C.HITCHHIKER] && review[C.HITCHHIKER].toLowerCase() == currentUser.toLowerCase()
     ).map(
         review => review._marker
     )
