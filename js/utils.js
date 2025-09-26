@@ -90,3 +90,20 @@ export function closestMarker(markers, lat, lon) {
     if (markers.length)
         return markers.sort((a, b) => a.getLatLng().distanceTo(latlng) - b.getLatLng().distanceTo(latlng))[0]
 }
+
+export function markerReviews(marker) {
+    const reviewIndices = marker.options._row[6]
+    return reviewIndices.map(i => window.reviewData[i])
+}
+
+// review-columns.js
+const columns = window.reviewColumns || [];
+const columnExports = {};
+
+columns.forEach((columnName, index) => {
+    const constName = columnName.toUpperCase().replace(/\W/g, '_');
+    columnExports[constName] = index;
+});
+
+// Also export the full object
+export const C = columnExports;

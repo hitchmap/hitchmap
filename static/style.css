@@ -438,3 +438,13 @@ ul.no-style {
 body.filtering .remove-filter-group {
     display: block;
 }
+.review-comment {
+    white-space: pre-line;
+}
+.review-meta {
+    margin-top: 1em;
+    font-style: italic;
+}
+.review-author-datetime {
+    margin-top: 1em;
+}

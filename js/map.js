@@ -5,6 +5,7 @@ import {clearParams, applyParams, filterMarkerGroup, removeFilterButtons} from '
 import {restoreView, storageAvailable, summaryText, closestMarker} from './utils';
 import {currentUser, firstUserPromise, userMarkerGroup, createUserMarkers} from './user';
 import {pendingGroup, updatePendingMarkers, addPending} from './pending';
+import {renderReviews} from './render-reviews';
 
 // Register service worker for offline functionality
 if ("serviceWorker" in navigator) {
@@ -47,7 +48,7 @@ var handleMarkerNavigation = function (marker) {
         $$('#spot-summary').innerText = summaryText(row)
 
         // Handle spot description and additional info
-        $$('#spot-text').innerHTML = row[3];
+        $$('#spot-text').replaceChildren(renderReviews(marker.options._reviews));
         $$('#extra-review-button').style.display = row[3].length > 200 ? 'block': 'none';
 
         if (!row[3] && row[5] == null)
@@ -123,8 +124,13 @@ for (let row of window.markerData) {
     let color = {1: 'red', 2: 'orange', 3: 'yellow', 4: 'lightgreen', 5: 'lightgreen'}[row[2]];
     let opacity = {1: 0.3, 2: 0.4, 3: 0.6, 4: 0.8, 5: 0.8}[row[2]];
     let point = new L.LatLng(row[0], row[1])
-    let weight = row[6] && row[6].length > 2 ? 2 : 1
-    let marker = L.circleMarker(point, {radius: 5, weight, fillOpacity: opacity, color: 'black', fillColor: color, _row: row});
+    let reviewIndices = row[6] || []
+    let reviews = reviewIndices.map(i => window.reviewData[i])
+    let weight = reviews.length > 2 ? 2 : 1
+    let marker = L.circleMarker(point, {radius: 5, weight, fillOpacity: opacity, color: 'black', fillColor: color, _row: row, _reviews: reviews});
+
+    for (let r of reviews)
+        r._marker = marker;
 
     marker.on('click', function(e) {
         handleMarkerClick(marker, point, e)

@@ -1,3 +1,5 @@
+import { C } from './utils.js';
+
 const knob = document.getElementById('knob');
 const knobLine = document.getElementById('knobLine');
 const knobCone = document.getElementById('knobCone');
@@ -142,110 +144,98 @@ export function applyParams() {
         if (filterMarkerGroup) filterMarkerGroup.remove()
         if (filterDestLineGroup) filterDestLineGroup.remove()
 
-        let filterMarkers = knobToggle.checked || distanceFilter.value ? window.destinationMarkers : window.allMarkers;
-        // display filters pane
-        document.body.classList.add('filtering')
+        // Start with all reviews
+        let filteredReviews = window.reviewData;
 
+        // Apply user filter
         if (userFilter.value) {
             const users = userFilter.value
                 .split(';')
                 .map(u => u.trim().toLowerCase())
                 .filter(u => u.length > 0);
 
-            // the frist element of the tuples contained in [6] is the user name
-            filterMarkers = filterMarkers.filter(
-                marker =>
-                    marker.options._row[6] &&
-                    marker.options._row[6]
-                        .map(review => review[0].toLowerCase())
-                        .some(user => users.includes(user))
+            filteredReviews = filteredReviews.filter(review => 
+                review[C.HITCHHIKER] && users.includes(review[C.HITCHHIKER].toLowerCase())
             );
         }
 
+        // Apply start time filter
         if (startTimeFilter.value) {
             const startTime = new Date(startTimeFilter.value).getTime();
-
-            // the second element of the tuples contained in [6] is the time when the ride happened
-            filterMarkers = filterMarkers
-                .filter(marker =>
-                    marker.options._row[6] &&
-                    marker.options._row[6]
-                        .map(review => review[1])
-                        .some(time => time !== null && time >= startTime)
-                );
+            filteredReviews = filteredReviews.filter(review => {
+                const rideTime = review[C.RIDE_DATETIME] || review[C.DATETIME];
+                return rideTime && new Date(rideTime).getTime() >= startTime;
+            });
         }
 
+        // Apply end time filter
         if (endTimeFilter.value) {
-            const endTime = new Date(endTimeFilter.value).getTime()
-
-            // the second element of the tuples contained in [6] is the time when the ride happened
-            filterMarkers = filterMarkers
-                .filter(marker =>
-                    marker.options._row[6] &&
-                    marker.options._row[6]
-                        .map(review => review[1])
-                        .some(time => time !== null && time <= endTime)
-                );
+            const endTime = new Date(endTimeFilter.value).getTime();
+            filteredReviews = filteredReviews.filter(review => {
+                const rideTime = review[C.RIDE_DATETIME] || review[C.DATETIME];
+                return rideTime && new Date(rideTime).getTime() <= endTime;
+            });
         }
 
+        // Apply text filter
         if (textFilter.value) {
-            filterMarkers = filterMarkers.filter(
-                x => x.options._row[3].toLowerCase().includes(textFilter.value.toLowerCase())
-            )
+            const searchText = textFilter.value.toLowerCase();
+            filteredReviews = filteredReviews.filter(review => 
+                review[C.COMMENT] && review[C.COMMENT].toLowerCase().includes(searchText)
+            );
         }
 
+        // Apply distance filter
         if (distanceFilter.value) {
-            filterMarkers = filterMarkers.filter(
-                x => {
-                    let from = x.getLatLng()
-                    let lats = x.options._row[7]
-                    let lons = x.options._row[8]
-
-                    for (let i in lats) {
-                        // Road distance is on average 25% longer than straight distance
-                        if (from.distanceTo([lats[i], lons[i]]) * 1.25 / 1000 > distanceFilter.value)
-                            return true
-                    }
-                    return false
-                }
-            )
+            const minDistance = parseFloat(distanceFilter.value);
+            filteredReviews = filteredReviews.filter(review => 
+                review[C.RIDE_DISTANCE] && review[C.RIDE_DISTANCE] >= minDistance
+            );
         }
+
+        // Apply directional filter
         if (knobToggle.checked) {
-            filterMarkers = filterMarkers.filter(
-                x => {
-                    let from = x.getLatLng()
-                    let lats = x.options._row[7]
-                    let lons = x.options._row[8]
+            filteredReviews = filteredReviews.filter(review => {
+                if (!review._marker) return false;
 
-                    for (let i in lats) {
-                        let travelAngle = Math.atan2(from.lat - lats[i], lons[i] - from.lng);
-                        // difference between the travel direction and the cone line
-                        let coneLineDiff = Math.abs(travelAngle - radAngle)
-                        let wrappedDiff = Math.min(coneLineDiff, 2 * Math.PI - coneLineDiff)
-                        // if the direction falls within the knob's cone
-                        if (wrappedDiff < radiansSpread)
-                            return true
-                    }
-                    return false
-                }
-            )
+                const marker = review._marker;
+                const from = marker.getLatLng();
+                const destLat = review[C.DEST_LAT];
+                const destLon = review[C.DEST_LON];
+
+                if (!destLat || !destLon) return false;
+
+                let travelAngle = Math.atan2(from.lat - destLat, destLon - from.lng);
+                let coneLineDiff = Math.abs(travelAngle - radAngle);
+                let wrappedDiff = Math.min(coneLineDiff, 2 * Math.PI - coneLineDiff);
+
+                return wrappedDiff < radiansSpread;
+            });
         }
 
-        // duplicate all markers to the filtering pane
-        filterMarkers = filterMarkers.map(
-            spot => {
-                let loc = spot.getLatLng()
-                let marker = new L.circleMarker(loc, Object.assign({}, spot.options, { pane: 'filtering' }))
-                marker.on('click', e => spot.fire('click', e))
-                return marker
+        // Get unique markers from filtered reviews
+        const uniqueMarkers = new Set();
+        filteredReviews.forEach(review => {
+            if (review._marker) {
+                uniqueMarkers.add(review._marker);
             }
-        )
+        });
+
+        // Convert Set to array and create filtered marker copies
+        const filterMarkers = Array.from(uniqueMarkers).map(spot => {
+            let loc = spot.getLatLng();
+            let marker = new L.circleMarker(loc, Object.assign({}, spot.options, { pane: 'filtering' }));
+            marker.on('click', e => spot.fire('click', e));
+            return marker;
+        });
 
         filterMarkerGroup = L.layerGroup(
             filterMarkers.reverse(), { pane: 'filtering' }
-        ).addTo(window.map)
+        ).addTo(window.map);
+        
+        document.body.classList.add('filtering');
     } else {
-        document.body.classList.remove('filtering')
+        document.body.classList.remove('filtering');
     }
 }
 

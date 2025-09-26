@@ -192,19 +192,19 @@ points["hitchhiker"] = points["nickname"].fillna(points["username"])
 
 points["user_link"] = ("<a href='/?user=" + e(points["hitchhiker"]) + "'>" + e(points["hitchhiker"]) + "</a>").fillna("Anonymous")
 
-points["text"] = (
-    e(comment_nl)
-    + "<i>"
-    + e(points["extra_text"])
-    + "</i><br><br>―"
-    + points["user_link"]
-    + points.ride_datetime.dt.strftime(", %a %d %b %Y, %H:%M").fillna(review_submit_datetime)
-)
+# points["text"] = (
+#     e(comment_nl)
+#     + "<i>"
+#     + e(points["extra_text"])
+#     + "</i><br><br>―"
+#     + points["user_link"]
+#     + points.ride_datetime.dt.strftime(", %a %d %b %Y, %H:%M").fillna(review_submit_datetime)
+# )
 
-oldies = points.datetime.dt.year <= 2021
-points.loc[oldies, "text"] = (
-    e(comment_nl[oldies]) + "―" + points.loc[oldies, "user_link"] + points[oldies].datetime.dt.strftime(", %B %Y").fillna("")
-)
+# oldies = points.datetime.dt.year <= 2021
+# points.loc[oldies, "text"] = (
+#     e(comment_nl[oldies]) + "―" + points.loc[oldies, "user_link"] + points[oldies].datetime.dt.strftime(", %B %Y").fillna("")
+# )
 
 # has_text = ~points.text.isnull()
 # points.loc[has_text, 'text'] = points.loc[has_text, 'text'].map(lambda x: html.escape(x).replace('\n', '<br>'))
@@ -213,17 +213,48 @@ groups = points.groupby("cluster_id")
 
 print("After clustering:", len(groups), "Before:", len(points.geometry.drop_duplicates()))
 
+# Create individual review data with all fields needed for rendering
+review_data = points[
+    [
+        "lat",
+        "lon",
+        "rating",
+        "wait",
+        "comment",
+        "ride_distance",
+        "direction",
+        "arrows",
+        "extra_text",
+        "hitchhiker",
+        "user_link",
+        "datetime",
+        "ride_datetime",
+        "country",
+        "service_area_name",
+    ]
+].copy()
+
+# Add a unique index for each review
+review_data["review_index"] = review_data.index
+
+# Convert to JSON-serializable format
+review_data_json = review_data.to_json(orient="values")
+review_columns = review_data.columns.to_series().to_json(orient="values")
+
 places = groups[["country", "service_area_name"]].first()
 places["rating"] = groups.rating.mean().round()
 places["wait"] = points[~points.wait.isnull()].groupby("cluster_id").wait.mean()
 places["ride_distance"] = points[~points.ride_distance.isnull()].groupby("cluster_id").ride_distance.mean()
-places["text"] = groups.text.apply(lambda t: "<hr>".join(t.dropna()))
+# places["text"] = groups.text.apply(lambda t: "<hr>".join(t.dropna()))
+places["text"] = ""
 places["review_count"] = groups.size()
+# Store indices of reviews instead of the text
+places["review_indices"] = groups.apply(lambda g: g.index.tolist())
 
 # to prevent confusion, only add a review user if they have a text written
-places["reviews"] = (
-    points.dropna(subset=["text", "hitchhiker"]).groupby("cluster_id").apply(lambda g: list(zip(g.hitchhiker, g.ride_datetime)))
-)
+# places["reviews"] = (
+#     points.dropna(subset=["text", "hitchhiker"]).groupby("cluster_id").apply(lambda g: list(zip(g.hitchhiker, g.ride_datetime)))
+# )
 
 places["dest_lats"] = points.dropna(subset=["dest_lat", "dest_lon"]).groupby("cluster_id").dest_lat.apply(list)
 places["dest_lons"] = points.dropna(subset=["dest_lat", "dest_lon"]).groupby("cluster_id").dest_lon.apply(list)
@@ -311,7 +342,7 @@ marker_data = places[
         "text",
         "wait",
         "ride_distance",
-        "reviews",
+        "review_indices",
         "dest_lats",
         "dest_lons",
     ]
@@ -336,7 +367,14 @@ with open(os.path.join(root_dir, "static", "style.css"), encoding="utf-8") as f:
     hitch_style = f.read()
 
 output = template.render(
-    {"hitch_script": hitch_script, "hitch_style": hitch_style, "markers": marker_data, "generation_date": generation_date}
+    {
+        "hitch_script": hitch_script,
+        "hitch_style": hitch_style,
+        "markers": marker_data,
+        "review_data": review_data_json,
+        "review_columns": review_columns,
+        "generation_date": generation_date,
+    }
 )
 
 with open(outname, "w", encoding="utf-8") as f:

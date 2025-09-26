@@ -1,3 +1,5 @@
+import { C } from './utils.js';
+
 export let currentUser;
 export let userMarkerGroup = L.layerGroup();
 
@@ -16,10 +18,10 @@ let userColors = {1: 'darkred', 2: 'darkred', 3: 'darkred', 4: 'green', 5: 'gree
 export function createUserMarkers(markers) {
     if (!currentUser) return
     userMarkerGroup.clearLayers()
-    let userMarkers = markers.filter(
-        marker => marker.options._row[6] && marker.options._row[6]
-            .map(x => x[0].toLowerCase())
-            .includes(currentUser.toLowerCase())
+    let userMarkers = window.reviewData.filter(
+        review => review[C.HITCHHIKER].toLowerCase() == currentUser.toLowerCase()
+    ).map(
+        review => review._marker
     )
     for (let marker of userMarkers) {
         let userDot = new L.circleMarker(marker.getLatLng(), {stroke: false, fill: true, radius: 1, fillColor: 'black', fillOpacity: 1, interactive: false})

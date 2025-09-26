@@ -60,7 +60,7 @@
         <h3 id="spot-header"><a target="_blank"></a></h3>
         <div id='spot-summary'></div>
         <div><button class="no-margin-bottom">Review this spot</button></div>
-        <h4>Comments</h4>
+        <h4>Reviews</h4>
         <div id='spot-text'></div>
         <div id="extra-review-button"><button>Review this spot</button></div>
         <i id="extra-text"></i>
@@ -171,6 +171,8 @@
     </div>
     <script>
         var markerData = {{ markers | safe }}
+        var reviewData = {{ review_data | safe }}
+        var reviewColumns = {{ review_columns | safe }}
     </script>
     <script>
      {{ hitch_script | safe }}
