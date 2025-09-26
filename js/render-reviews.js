@@ -42,7 +42,7 @@ export function renderReviews(reviews) {
         }
         
         // oldie metadata can be average metadata
-        if (metaEl.children.length > 0 && review[C.DATETIME] > '2021') {
+        if (metaEl.children.length > 0 && review[C.DATETIME] > +new Date('2021')) {
             reviewElement.appendChild(metaEl);
         }
         
