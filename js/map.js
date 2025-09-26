@@ -50,11 +50,6 @@ var handleMarkerNavigation = function (marker) {
         // Handle spot description and additional info
         $$('#spot-text').replaceChildren(renderReviews(marker.options._reviews));
         $$('#extra-review-button').style.display = row[3].length > 200 ? 'block': 'none';
-
-        if (!row[3] && row[5] == null)
-            $$('#extra-text').innerHTML = 'No comments/ride info. To hide spots like this, check out the <a href=/light.html>lightweight map</a>.'
-        else
-            $$('#extra-text').innerHTML = ''
     }, 100)
 };
 
