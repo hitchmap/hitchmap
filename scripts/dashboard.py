@@ -35,7 +35,7 @@ else:
 
 # Spots
 df = pd.read_sql(
-    "select * from points where not banned and datetime is not null",
+    "select * from points where not banned and revised_by is null and datetime is not null",
     sqlite3.connect(DATABASE),
 )
 
@@ -119,7 +119,7 @@ def e(s):
 
 
 points = pd.read_sql(
-    sql="select * from points where not banned order by datetime is not null desc, datetime desc",
+    sql="select * from points where not banned and revised_by is null order by datetime is not null desc, datetime desc",
     con=sqlite3.connect(DATABASE),
 )
 points["user_id"] = points["user_id"].astype(pd.Int64Dtype())

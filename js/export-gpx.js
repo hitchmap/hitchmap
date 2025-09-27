@@ -1,4 +1,5 @@
 import {summaryText} from './utils';
+import {renderReviews} from './render-reviews';
 
 export function exportAsGPX() {
     var script = document.createElement("script");
@@ -7,7 +8,7 @@ export function exportAsGPX() {
         let features = allMarkers.map(m => ({
             "type": "Feature",
             "properties": {
-                "text": summaryText(m.options._row) + '\n\n' + m.options._row[3],
+                "text": summaryText(m.options._row) + '\n\n' + renderReviews(m.options._reviews).textContent,
                 "url": `https://hitchmap.com/${m.options._row[0]},${m.options._row[1]}`
             },
             "geometry": {

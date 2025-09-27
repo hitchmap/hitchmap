@@ -54,7 +54,7 @@ if not os.path.exists(DATABASE):
     exit()
 
 copy_table_schema("points")
-all_points = pd.read_sql("select * from points where not banned", sqlite3.connect(DATABASE))
+all_points = pd.read_sql("select * from points where not banned and revised_by is null", sqlite3.connect(DATABASE))
 all_points["ip"] = ""
 all_points.to_sql("points", sqlite3.connect(DATABASE_DUMP), index=False, if_exists="append")
 

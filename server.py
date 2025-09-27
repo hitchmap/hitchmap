@@ -30,6 +30,10 @@ def android_app():
 @app.route("/experience", methods=["POST"])
 def experience():
     data = request.form
+
+    update_id = int(data["update"]) if data.get("update", None) else None
+    assert not update_id or not current_user.is_anonymous
+
     rating = int(data["rate"])
     wait = int(data["wait"]) if data["wait"] != "" else None
     assert wait is None or wait >= 0
@@ -38,7 +42,7 @@ def experience():
     assert comment is None or len(comment) < 10000
     nickname = data["nickname"] if current_user.is_anonymous and re.match(r"^\w{1,32}$", data["nickname"]) else None
 
-    if security.datastore.find_user(case_insensitive=True, username=nickname):
+    if nickname and security.datastore.find_user(case_insensitive=True, username=nickname):
         return jsonify({"error": "This nickname is already used by a registered user. Please choose another nickname."}), 400
 
     signal = data["signal"] if data["signal"] != "null" else None
@@ -113,8 +117,20 @@ def experience():
         ],
         index=[pid],
     )
+    # Perform all database operations in a single transaction
+    with db.engine.connect() as conn:
+        with conn.begin():
+            # Insert new point
+            df.to_sql("points", conn, index_label="id", if_exists="append")
+            # If updating an existing point, check ownership and set revised_by in one statement
+            if update_id:
+                result = conn.execute(
+                    "UPDATE points SET revised_by = ? WHERE id = ? AND user_id = ? AND revised_by is null",
+                    [pid, old_id, current_user.id],
+                )
+                # Check if any row was actually updated, if not, roll back
+                assert result.rowcount == 1
 
-    df.to_sql("points", db.engine, index_label="id", if_exists="append")
     return jsonify({"success": True})
 
 

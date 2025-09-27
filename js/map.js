@@ -1,6 +1,6 @@
 import {addGeocoder} from './geocoder'
 import {exportAsGPX} from './export-gpx';
-import {$$, bar, bars, arrowLine} from './utils';
+import {$$, bar, bars, arrowLine, C} from './utils';
 import {clearParams, applyParams, filterMarkerGroup, removeFilterButtons} from './filters';
 import {restoreView, storageAvailable, summaryText, closestMarker} from './utils';
 import {currentUser, firstUserPromise, userMarkerGroup, createUserMarkers} from './user';
@@ -79,21 +79,20 @@ var map = L.map(
 
 let allCoords = window.markerData.map(m => [m[0], m[1]])
 
-let allMarkers = [], destinationMarkers = [];
+let allMarkers = [];
 
 let allMarkersRenderer = map.getRenderer(map)
 let normalDrawFunction = allMarkersRenderer._redraw
 
 let heatLayer = L.heatLayer(allCoords, {radius: 5, blur: 1, maxZoom: 1, minOpacity: 1, max: 100, gradient: {0: 'black', 0.9: 'black', 1: 'lightgreen'}}).addTo(map)
 
-// Usage:
 // Note: neither will be shown when a filter is active
 function showHeatmapOrDefaultPane() {
     let {canvas} = allMarkersRenderer._ctx
     if (map.getZoom() < 7) {
         canvas.style.display = 'none';
         allMarkersRenderer._ctx.clearRect(0, 0, canvas.width, canvas.height)
-        // performance hack: override redraw to stop (off-screen) draws without removing and adding all markers
+        // performance hack: override redraw to stop (off-screen) draws
         allMarkersRenderer._redraw = function(){}
         heatLayer.addTo(map)
     }
@@ -131,7 +130,6 @@ for (let row of window.markerData) {
         handleMarkerClick(marker, point, e)
     })
 
-    if (row[7] && row[7].length) destinationMarkers.push(marker)
     allMarkers.push(marker)
 }
 
@@ -310,31 +308,15 @@ var addSpotStep = function (e) {
             bar('.topbar.spot.step2')
         }
         else if (addSpotPoints.length == 2) {
-            if (addSpotPoints[1].lat !== 'nan') {
+            const destinationProvided = addSpotPoints[1].lat !== 'nan'
+            
+            if (destinationProvided) {
                 var bounds = new L.LatLngBounds(addSpotPoints);
                 map.fitBounds(bounds, {})
             }
             map.setZoom(map.getZoom() - 1)
-            bar('.sidebar.spot-form-container')
 
-            let points = addSpotPoints
-            const destinationGiven = points[1].lat !== 'nan'
-            var dest = destinationGiven ? `${points[1].lat.toFixed(4)}, ${points[1].lng.toFixed(4)}` : 'unknown destination'
-            $$('.sidebar.spot-form-container p.greyed').innerText = `${points[0].lat.toFixed(4)}, ${points[0].lng.toFixed(4)} → ${dest}`
-            $$("#no-ride").classList.toggle("make-invisible", destinationGiven);
-
-            // nicknames wont be recorded if a user is logged in
-            $$("#nickname-container").classList.toggle("make-invisible", !!currentUser);
-            $$('#spot-form input[name=coords]').value = `${points[0].lat},${points[0].lng},${points[1].lat},${points[1].lng}`
-
-            const form = $$("#spot-form");
-            form.reset();
-
-            if (storageAvailable('localStorage')) {
-                var uname = $$('input[name=nickname]')
-                uname.value = localStorage.getItem('nick')
-                uname.onchange = e => localStorage.setItem('nick', uname.value)
-            }
+            initializeSpotForm(addSpotPoints, destinationProvided)
         }
     }
     else if (e.target.innerText == 'Cancel') {
@@ -344,13 +326,34 @@ var addSpotStep = function (e) {
     document.body.classList.toggle('adding-spot', addSpotPoints.length > 0)
 }
 
-let extendedForm = document.getElementById('extended_info');
-extendedForm.open = localStorage.getItem('details-open') == 'true';
-extendedForm.ontoggle = () => localStorage.setItem('details-open', extendedForm.open ? 'true' : 'false');
+// New function for form initialization logic
+function initializeSpotForm(points, destinationProvided) {
+    bar('.sidebar.spot-form-container')
+    var dest = destinationProvided ? `${points[1].lat.toFixed(4)}, ${points[1].lng.toFixed(4)}` : 'unknown destination'
+    $$('.sidebar.spot-form-container p.greyed').innerText = `${points[0].lat.toFixed(4)}, ${points[0].lng.toFixed(4)} → ${dest}`
+    $$("#no-ride").classList.toggle("make-invisible", destinationProvided);
+
+    // nicknames wont be recorded if a user is logged in
+    $$("#nickname-container").classList.toggle("make-invisible", !!currentUser);
+    $$('#spot-form input[name=coords]').value = `${points[0].lat},${points[0].lng},${points[1].lat},${points[1].lng}`
+
+    const form = $$("#spot-form");
+    form.reset();
+
+    if (storageAvailable('localStorage')) {
+        var uname = $$('input[name=nickname]')
+        uname.value = localStorage.getItem('nick')
+        uname.onchange = e => localStorage.setItem('nick', uname.value)
+    }
+}
 
 bars.forEach(bar => {
     if (bar.classList.contains('spot')) bar.onclick = addSpotStep
 })
+
+let extendedForm = document.getElementById('extended_info');
+extendedForm.open = localStorage.getItem('details-open') == 'true';
+extendedForm.ontoggle = () => localStorage.setItem('details-open', extendedForm.open ? 'true' : 'false');
 
 // Map click handler for mobile misclicks
 map.on('click', e => {
@@ -401,15 +404,12 @@ function renderPoints() {
     }
     document.body.classList.toggle('has-points', addSpotPoints.length)
 
-    // destLineGroup = L.layerGroup()
-
     for (let a of active) {
-        let lats = a.options._row[7]
-        let lons = a.options._row[8]
-        if (lats && lats.length) {
-            for (let i in lats) {
-                arrowLine(a.getLatLng(), [lats[i], lons[i]]).addTo(destLineGroup)
-            }
+        let reviews = a.options._reviews.filter(r => r[C.DEST_LAT] != null)
+        for (let review of reviews) {
+            let lat = review[C.DEST_LAT]
+            let lon = review[C.DEST_LON]
+            arrowLine(a.getLatLng(), [lat, lon]).addTo(destLineGroup)
         }
     }
 
@@ -515,7 +515,6 @@ window.handleMarkerClick = handleMarkerClick
 window.map = map
 window.allMarkers = allMarkers;
 window.allMarkerGroup = allMarkerGroup;
-window.destinationMarkers = destinationMarkers;
 
 // Set up hash change listener
 window.onhashchange = navigate

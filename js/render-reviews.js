@@ -70,7 +70,29 @@ export function renderReviews(reviews) {
             if (!dateString) return '';
             return ', ' + new Date(dateString).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
         }
-authorDateTimeEl.innerHTML = `―${review[C.USER_LINK]}${formatDateTime(review[C.RIDE_DATETIME]) || formatDateFallback(review[C.DATETIME]) || ''}`;
+        // Create user link span
+        const userLinkSpan = document.createElement('span');
+        userLinkSpan.textContent = '―';
+        
+        if (review[C.HITCHHIKER] && review[C.HITCHHIKER] !== 'Anonymous') {
+            const userLink = document.createElement('a');
+            userLink.href = `/?user=${encodeURIComponent(review[C.HITCHHIKER])}`;
+            userLink.textContent = review[C.HITCHHIKER];
+            userLinkSpan.appendChild(userLink);
+        } else {
+            userLinkSpan.textContent += 'Anonymous';
+        }
+        
+        authorDateTimeEl.appendChild(userLinkSpan);
+        
+        // Add datetime
+        const datetimeText = formatDateTime(review[C.RIDE_DATETIME]) || formatDateFallback(review[C.DATETIME]) || '';
+        if (datetimeText) {
+            const datetimeSpan = document.createElement('span');
+            datetimeSpan.textContent = datetimeText;
+            authorDateTimeEl.appendChild(datetimeSpan);
+        }
+        
         reviewElement.appendChild(authorDateTimeEl);
         
         // Add HR separator except for the last review

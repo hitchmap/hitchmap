@@ -69,6 +69,7 @@ env/
 build/
 develop-eggs/
 dist/
+archive/
 downloads/
 eggs/
 .eggs/

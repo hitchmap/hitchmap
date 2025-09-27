@@ -16,7 +16,7 @@ DATABASE = os.path.join(db_dir, "prod-points.sqlite")
 
 
 points = pd.read_sql(
-    "select * from points where not banned order by datetime is not null desc, datetime desc",
+    "select * from points where not banned and revised_by is null order by datetime is not null desc, datetime desc",
     sqlite3.connect(DATABASE),
 )
 

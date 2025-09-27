@@ -11,7 +11,7 @@ from sklearn.cluster import DBSCAN
 cache_file = os.path.join(scripts_dir, "overpass_api_cache")
 requests_cache.install_cache(cache_file, backend="sqlite", expire_after=6 * 365 * 24 * 60 * 60)
 
-points = pd.read_sql("select * from points where not banned", get_db())
+points = pd.read_sql("select * from points where not banned and revised_by is null", get_db())
 
 # Load coordinates (Assuming 'points' DataFrame exists with "lon" and "lat")
 coords = points[["lon", "lat"]].drop_duplicates().reset_index(drop=True)

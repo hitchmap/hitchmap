@@ -41,7 +41,7 @@ outname_dups = os.path.join(dist_dir, "recent-dups.html")
 generation_date = pd.Timestamp.utcnow().isoformat()
 
 points = pd.read_sql(
-    sql="select * from points where not banned order by datetime is not null desc, datetime desc",
+    sql="select * from points where not banned and revised_by is null order by datetime is not null desc, datetime desc",
     con=get_db(),
 )
 
@@ -192,23 +192,6 @@ points["hitchhiker"] = points["nickname"].fillna(points["username"])
 
 points["user_link"] = ("<a href='/?user=" + e(points["hitchhiker"]) + "'>" + e(points["hitchhiker"]) + "</a>").fillna("Anonymous")
 
-# points["text"] = (
-#     e(comment_nl)
-#     + "<i>"
-#     + e(points["extra_text"])
-#     + "</i><br><br>―"
-#     + points["user_link"]
-#     + points.ride_datetime.dt.strftime(", %a %d %b %Y, %H:%M").fillna(review_submit_datetime)
-# )
-
-# oldies = points.datetime.dt.year <= 2021
-# points.loc[oldies, "text"] = (
-#     e(comment_nl[oldies]) + "―" + points.loc[oldies, "user_link"] + points[oldies].datetime.dt.strftime(", %B %Y").fillna("")
-# )
-
-# has_text = ~points.text.isnull()
-# points.loc[has_text, 'text'] = points.loc[has_text, 'text'].map(lambda x: html.escape(x).replace('\n', '<br>'))
-
 groups = points.groupby("cluster_id")
 
 print("After clustering:", len(groups), "Before:", len(points.geometry.drop_duplicates()))
@@ -222,15 +205,13 @@ review_data = points[
         "wait",
         "comment",
         "ride_distance",
-        "direction",
         "arrows",
-        "extra_text",
         "hitchhiker",
-        "user_link",
         "datetime",
         "ride_datetime",
         "country",
-        "service_area_name",
+        "dest_lat",
+        "dest_lon",
     ]
 ].copy()
 
@@ -334,19 +315,7 @@ places.reset_index(inplace=True)
 # make sure high-rated are on top
 places.sort_values("z-index", inplace=True, ascending=True)
 
-marker_data = places[
-    [
-        "lat",
-        "lon",
-        "rating",
-        "text",
-        "wait",
-        "ride_distance",
-        "review_indices",
-        "dest_lats",
-        "dest_lons",
-    ]
-].to_json(orient="values")
+marker_data = places[["lat", "lon", "rating", "text", "wait", "ride_distance", "review_indices"]].to_json(orient="values")
 
 try:
     subprocess.run(["npm", "run", "build"], check=True, text=True)
