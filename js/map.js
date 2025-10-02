@@ -471,8 +471,15 @@ $$('#spot-form').addEventListener('submit', async function(event) {
     submitButton.disabled = false;
 });
 
+let oldUrl;
+
 function navigate() {
     applyParams();
+
+    if (location.href == oldUrl)
+        return
+
+    oldUrl = location.href;
 
     let args = window.location.hash.slice(1).split(',')
     if (args[0] == 'location') {
