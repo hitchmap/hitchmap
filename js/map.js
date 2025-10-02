@@ -476,7 +476,7 @@ let oldUrl;
 function navigate() {
     applyParams();
 
-    if (location.href == oldUrl)
+    if (location.href == oldUrl && location.hash.slice(1))
         return
 
     oldUrl = location.href;
