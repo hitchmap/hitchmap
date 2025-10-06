@@ -103,7 +103,29 @@ const columnExports = {};
 columns.forEach((columnName, index) => {
     const constName = columnName.toUpperCase().replace(/\W/g, '_');
     columnExports[constName] = index;
-});
+})
+
+/**
+ * Mount an existing HTML element (selected via CSS selector) into
+ * Leaflet’s control container at a given position (default: 'topleft').
+ * Returns the mounted element so you can immediately attach listeners.
+ */
+export function addAsLeafletControl(selector, position = 'topleft') {
+    const el = document.querySelector(selector);
+
+    const Control = L.Control.extend({
+        options: { position },
+        onAdd() {
+            el.style.display = ''; // unhide in case it was hidden
+            return el;
+        },
+        onRemove() {}
+    });
+
+    window.map.addControl(new Control());
+    return el;
+}
+;
 
 // Also export the full object
 export const C = columnExports;

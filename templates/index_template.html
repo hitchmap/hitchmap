@@ -1,6 +1,30 @@
 {% extends "index_root.html" %}
 <!DOCTYPE html>
 {% block content %}
+    <div id="leaflet-controls" style="display:none;">
+        <div id="menu-control" class="leaflet-bar horizontal-button">
+            <a href="javascript:void(0);">☰</a>
+        </div>
+
+        <div id="addspot-control" class="leaflet-bar horizontal-button">
+            <a href="javascript:void(0);">📍 Add spot</a>
+        </div>
+
+        <div id="account-control" class="leaflet-bar horizontal-button">
+            <a href="/me">👤 Account</a>
+        </div>
+
+        <div id="filter-control" class="leaflet-bar horizontal-button">
+            <a href="#filters">🔍 Filters</a>
+        </div>
+
+        <div id="tile-control" class="leaflet-bar horizontal-button">
+            <img />
+        </div>
+        <div id="flex-break-1" class="flex-break" style="display:none"></div>
+        <div id="flex-break-2" class="flex-break" style="display:none"></div>
+        <div id="flex-break-3" class="flex-break" style="display:none"></div>
+    </div>
     <div class="sidebar spot-form-container">
         <h3>New Review</h3>
         <p class=greyed></p>

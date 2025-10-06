@@ -1,6 +1,6 @@
 import {addGeocoder} from './geocoder'
 import {exportAsGPX} from './export-gpx';
-import {$$, bar, bars, arrowLine, C} from './utils';
+import {$$, bar, bars, arrowLine, C, addAsLeafletControl} from './utils';
 import {clearParams, applyParams, filterMarkerGroup, removeFilterButtons} from './filters';
 import {restoreView, storageAvailable, summaryText, closestMarker} from './utils';
 import {currentUser, firstUserPromise, userMarkerGroup, createUserMarkers} from './user';
@@ -59,7 +59,7 @@ $$(".sidebar.show-spot").addEventListener("click", function (event) {
     const linkUrl = new URL(link.href, window.location.origin);
 
     if (linkUrl.origin === window.location.origin) {
-        event.preventDefault(); // Prevent default navigation
+        L.DomEvent.stopPropagation(e)
         history.pushState({}, "", link.href); // Update the URL without reloading
         navigate();
     }
@@ -76,6 +76,7 @@ var map = L.map(
         worldCopyJump: true,
     }
 );
+window.map = map
 
 let allCoords = window.markerData.map(m => [m[0], m[1]])
 
@@ -151,183 +152,124 @@ var osmLayer = L.tileLayer(
 // Create Esri satellite layers (requires esri-leaflet library)
 var esriImagery = L.esri.basemapLayer('Imagery');
 var esriLabels = L.esri.basemapLayer('ImageryLabels', {pane: 'tilePane'});
+var esriTransport = L.esri.basemapLayer('ImageryTransportation', {pane: 'tilePane'});
 
 // Create layer groups
-var esriGroup = L.layerGroup([esriImagery, esriLabels]);
+var esriGroup = L.layerGroup([esriImagery, esriTransport, esriLabels]);
 var osmGroup = L.layerGroup([osmLayer]);
 
-// Start with OSM (default)
-osmGroup.addTo(map);
-var currentTileLayer = 'osm';
+// --- Attach HTML-defined controls to Leaflet ---
+
+// Menu button
+const menuEl = addAsLeafletControl('#menu-control');
+menuEl.querySelector('a').addEventListener('click', e => {
+    L.DomEvent.stopPropagation(e)
+    navigateHome();
+    if (document.body.classList.contains('menu')) bar();
+    else bar('.sidebar.menu');
+    document.body.classList.toggle('menu');
+});
+
+// Add spot button
+const addSpotEl = addAsLeafletControl('#addspot-control');
+addSpotEl.querySelector('a').addEventListener('click', e => {
+    L.DomEvent.stopPropagation(e)
+    if (window.location.href.includes('light')) {
+        if (confirm('Do you want to be redirected to the full version where you can add spots?')) {
+            window.location = '/';
+        }
+        return;
+    }
+    clearParams();
+    navigateHome();
+    document.body.classList.add('adding-spot');
+    bar('.topbar.spot.step1');
+});
+
+// Account button
+addAsLeafletControl('#account-control');
+
+// Filter button
+addAsLeafletControl('#filter-control');
+
+// Optional layout break
+addAsLeafletControl('#flex-break-1');
+
+// Remove filter buttons (existing control)
+map.addControl(removeFilterButtons);
+
+// Optional layout break
+addAsLeafletControl('#flex-break-2');
+
+// Tile toggle button
+// Initialize from localStorage, default to 'osm' if not set
+// Start with the opposite of what we want, so toggleLayer() gives us the right one
+var currentTileLayer = localStorage.getItem('currentTileLayer') === 'esri' ? 'osm' : 'esri';
 
 function updateAttribution() {
-    let attrControl = $$('.leaflet-control-attribution');
+    const attrControl = $$('.leaflet-control-attribution');
     if (currentTileLayer === 'osm') {
         attrControl.innerHTML = `
-            © <a href=https://openstreetmap.org/copyright>OpenStreetMap</a>, <a href=https://hitchmap.com/copyright.html>Hitchmap</a> contributors
+            © <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>,
+            <a href="https://hitchmap.com/copyright.html">Hitchmap</a> contributors
         `;
     } else {
-        // For Esri, let it manage its own dynamic attribution and just append Hitchmap
-        // Find the existing Esri attribution and append Hitchmap if not already there
+        // For Esri, let it manage its own dynamic attribution and just append Hitchmap if not already there
         if (!attrControl.innerHTML.includes('Hitchmap')) {
-            attrControl.innerHTML += `, <a href=https://hitchmap.com/copyright.html>Hitchmap</a> contributors`;
+            attrControl.innerHTML += `, <a href="https://hitchmap.com/copyright.html">Hitchmap</a> contributors`;
         }
     }
 }
 
-// Create custom toggle control
-var TileToggleControl = L.Control.extend({
-    options: {
-        position: 'topleft'
-    },
-    onAdd: function (map) {
-        var controlDiv = L.DomUtil.create('div', 'leaflet-bar leaflet-control-toggle');
-        var img = L.DomUtil.create('img', '', controlDiv);
-        img.style.cursor = 'pointer';
-        img.style.width = '30px';
+// Tile toggle button
+const tileToggleEl = addAsLeafletControl('#tile-control');
+const img = tileToggleEl.querySelector('img');
+img.style.cursor = 'pointer';
+img.style.width = '30px';
 
-        function updateToggleImage() {
-            if (currentTileLayer === 'osm') {
-                // Show Esri preview when on OSM
-                img.src = 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/2/1/2';
-                img.title = 'Switch to Satellite View';
-            } else {
-                // Show OSM preview when on Esri
-                img.src = 'https://tile.openstreetmap.org/2/2/1.png';
-                img.title = 'Switch to Street Map';
-            }
-        }
-
-        updateToggleImage();
-        updateAttribution();
-
-        L.DomEvent.on(controlDiv, 'click', function (e) {
-            L.DomEvent.stopPropagation(e);
-            L.DomEvent.preventDefault(e);
-            
-            if (currentTileLayer === 'osm') {
-                map.removeLayer(osmGroup);
-                esriGroup.addTo(map);
-                currentTileLayer = 'esri';
-            } else {
-                map.removeLayer(esriGroup);
-                osmGroup.addTo(map);
-                currentTileLayer = 'osm';
-            }
-            
-            updateToggleImage();
-            updateAttribution();
-        });
-
-        return controlDiv;
+function updateToggleImage() {
+    if (currentTileLayer === 'osm') {
+        // Show Esri preview when on OSM
+        img.src = 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/2/1/2';
+        img.title = 'Switch to Satellite View';
+    } else {
+        // Show OSM preview when on Esri
+        img.src = 'https://tile.openstreetmap.org/2/2/1.png';
+        img.title = 'Switch to Street Map';
     }
+}
+
+function toggleLayer() {
+    if (currentTileLayer === 'osm') {
+        map.removeLayer(osmGroup);
+        esriGroup.addTo(map);
+        currentTileLayer = 'esri';
+    } else {
+        map.removeLayer(esriGroup);
+        osmGroup.addTo(map);
+        currentTileLayer = 'osm';
+    }
+    // Save to localStorage whenever the layer changes
+    localStorage.setItem('currentTileLayer', currentTileLayer);
+    updateToggleImage();
+    updateAttribution();
+}
+
+// Initialize with saved layer preference by toggling to it
+toggleLayer();
+
+img.addEventListener('click', e => {
+    L.DomEvent.stopPropagation(e)
+    e.stopPropagation();
+    toggleLayer();
 });
 
-var AddSpotButton = L.Control.extend({
-    options: {
-        position: 'topleft'
-    },
-    onAdd: function (map) {
-        var controlDiv = L.DomUtil.create('div', 'leaflet-bar horizontal-button add-spot');
-        var container = L.DomUtil.create('a', '', controlDiv);
-        container.href = "javascript:void(0);";
-        container.innerText = "📍 Add spot";
-
-        container.onclick = function (e) {
-            if (window.location.href.includes('light')) {
-                if (confirm('Do you want to be redirected to the full version where you can add spots?'))
-                    window.location = '/'
-                return;
-            }
-            clearParams()
-            navigateHome()
-            document.body.classList.add('adding-spot')
-            bar('.topbar.spot.step1')
-
-            L.DomEvent.stopPropagation(e)
-        }
-
-        return controlDiv;
-    }
-});
-
-var MenuButton = L.Control.extend({
-    options: {
-        position: 'topleft'
-    },
-    onAdd: function (map) {
-        var controlDiv = L.DomUtil.create('div', 'leaflet-bar horizontal-button menu');
-        var container = L.DomUtil.create('a', '', controlDiv);
-        container.href = "javascript:void(0);";
-        container.innerHTML = "☰";
-
-        container.onclick = function (e) {
-            navigateHome()
-            if (document.body.classList.contains('menu'))
-                bar()
-            else
-                bar('.sidebar.menu')
-            document.body.classList.toggle('menu')
-            L.DomEvent.stopPropagation(e)
-        }
-
-        return controlDiv;
-    }
-});
-
-var AccountButton = L.Control.extend({
-    options: {
-        position: 'topleft'
-    },
-    onAdd: function (map) {
-        var controlDiv = L.DomUtil.create('div', 'leaflet-bar horizontal-button your-account');
-        var container = L.DomUtil.create('a', '', controlDiv);
-        container.href = "/me";
-        container.innerHTML = "👤 Account";
-        container.onclick = L.DomEvent.stopPropagation
-
-        return controlDiv;
-    }
-});
-
-var FilterButton = L.Control.extend({
-    options: {
-        position: 'topleft'
-    },
-    onAdd: function (map) {
-        var controlDiv = L.DomUtil.create('div', 'leaflet-bar horizontal-button filter-button');
-        var container = L.DomUtil.create('a', '', controlDiv);
-        container.href = "#filters";
-        container.innerHTML = "🔍 Filters";
-        container.onclick = L.DomEvent.stopPropagation
-
-        return controlDiv;
-    }
-});
-
-// newline in leaflet control land
-var FlexBreak = L.Control.extend({
-    options: {position: 'topleft'},
-    onAdd: function (map) {
-        var controlDiv = L.DomUtil.create('div', 'flex-break');
-        return controlDiv;
-    }
-});
-
-////// Add interaction buttons to the map //////
-map.addControl(new MenuButton());
-map.addControl(new AddSpotButton());
-map.addControl(new AccountButton());
-map.addControl(new FilterButton());
-map.addControl(new FlexBreak());
-map.addControl(removeFilterButtons);
-map.addControl(new FlexBreak());
-map.addControl(new TileToggleControl());
-// Add GPS
+// GPS and geocoder remain in the same sequence
 L.control.locate().addTo(map);
-// Add geocoding functionality
 addGeocoder(map);
-map.addControl(new FlexBreak());
+
+// Optional layout break
+addAsLeafletControl('#flex-break-3');
 
 // Move zoom control to bottom
 var zoom = $$('.leaflet-control-zoom')
@@ -508,7 +450,7 @@ $$('.hitch-map').focus()
 
 // validate add spot form input
 $$('#spot-form').addEventListener('submit', async function(event) {
-    event.preventDefault(); // Prevents the default page reload
+    L.DomEvent.stopPropagation(e)
 
     let pendingLoc = addSpotPoints[0]
 
@@ -589,7 +531,6 @@ function navigateHome() {
 window.navigate = navigate
 window.navigateHome = navigateHome
 window.handleMarkerClick = handleMarkerClick
-window.map = map
 window.allMarkers = allMarkers;
 window.allMarkerGroup = allMarkerGroup;
 
