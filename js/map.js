@@ -59,7 +59,7 @@ $$(".sidebar.show-spot").addEventListener("click", function (event) {
     const linkUrl = new URL(link.href, window.location.origin);
 
     if (linkUrl.origin === window.location.origin) {
-        L.DomEvent.stopPropagation(e)
+        e.preventDefault()
         history.pushState({}, "", link.href); // Update the URL without reloading
         navigate();
     }
@@ -450,7 +450,7 @@ $$('.hitch-map').focus()
 
 // validate add spot form input
 $$('#spot-form').addEventListener('submit', async function(event) {
-    L.DomEvent.stopPropagation(e)
+    event.preventDefault()
 
     let pendingLoc = addSpotPoints[0]
 

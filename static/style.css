@@ -92,9 +92,6 @@ body.adding-spot .horizontal-button {
     height: auto !important;
     padding: 5px 10px;
 }
-.filter-button, .horizontal-button.add-spot, .your-account {
-    clear: none !important;
-}
 .horizontal-button.menu {
     width: 35px;
 }

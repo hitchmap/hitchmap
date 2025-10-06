@@ -61,7 +61,7 @@ Promise.all([async browser => {
     ]);
 
     // Click on <a> "📍 Add spot"
-    await page.click('.add-spot > a');
+    await page.click('#addspot-control > a');
 
     // Click on <button> "Done"
     await page.click('.step1 > button:nth-child(3)');
@@ -118,7 +118,7 @@ Promise.all([async browser => {
 
     // Click on <a> "📍 Add spot"
     await Promise.all([
-        page.click('.add-spot > [href="javascript:void(0);"]'),
+        page.click('#addspot-control > a'),
         page.waitForNavigation()
     ]);
 
