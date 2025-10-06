@@ -142,13 +142,86 @@ userMarkerGroup.addTo(map)
 updatePendingMarkers()
 pendingGroup.addTo(map)
 
-var tileLayer = L.tileLayer(
+// Store the original OSM tile layer
+var osmLayer = L.tileLayer(
     "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
     {"attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors", "detectRetina": false, "maxNativeZoom": 19, "maxZoom": 19, "minZoom": 1, "noWrap": false, "opacity": 1, "subdomains": "abc", "tms": false}
 );
 
+// Create Esri satellite layers (requires esri-leaflet library)
+var esriImagery = L.esri.basemapLayer('Imagery');
+var esriLabels = L.esri.basemapLayer('ImageryLabels', {pane: 'tilePane'});
 
-tileLayer.addTo(map);
+// Create layer groups
+var esriGroup = L.layerGroup([esriImagery, esriLabels]);
+var osmGroup = L.layerGroup([osmLayer]);
+
+// Start with OSM (default)
+osmGroup.addTo(map);
+var currentTileLayer = 'osm';
+
+function updateAttribution() {
+    let attrControl = $$('.leaflet-control-attribution');
+    if (currentTileLayer === 'osm') {
+        attrControl.innerHTML = `
+            © <a href=https://openstreetmap.org/copyright>OpenStreetMap</a>, <a href=https://hitchmap.com/copyright.html>Hitchmap</a> contributors
+        `;
+    } else {
+        // For Esri, let it manage its own dynamic attribution and just append Hitchmap
+        // Find the existing Esri attribution and append Hitchmap if not already there
+        if (!attrControl.innerHTML.includes('Hitchmap')) {
+            attrControl.innerHTML += `, <a href=https://hitchmap.com/copyright.html>Hitchmap</a> contributors`;
+        }
+    }
+}
+
+// Create custom toggle control
+var TileToggleControl = L.Control.extend({
+    options: {
+        position: 'topleft'
+    },
+    onAdd: function (map) {
+        var controlDiv = L.DomUtil.create('div', 'leaflet-bar leaflet-control-toggle');
+        var img = L.DomUtil.create('img', '', controlDiv);
+        img.style.cursor = 'pointer';
+        img.style.width = '30px';
+
+        function updateToggleImage() {
+            if (currentTileLayer === 'osm') {
+                // Show Esri preview when on OSM
+                img.src = 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/2/1/2';
+                img.title = 'Switch to Satellite View';
+            } else {
+                // Show OSM preview when on Esri
+                img.src = 'https://tile.openstreetmap.org/2/2/1.png';
+                img.title = 'Switch to Street Map';
+            }
+        }
+
+        updateToggleImage();
+        updateAttribution();
+
+        L.DomEvent.on(controlDiv, 'click', function (e) {
+            L.DomEvent.stopPropagation(e);
+            L.DomEvent.preventDefault(e);
+            
+            if (currentTileLayer === 'osm') {
+                map.removeLayer(osmGroup);
+                esriGroup.addTo(map);
+                currentTileLayer = 'esri';
+            } else {
+                map.removeLayer(esriGroup);
+                osmGroup.addTo(map);
+                currentTileLayer = 'osm';
+            }
+            
+            updateToggleImage();
+            updateAttribution();
+        });
+
+        return controlDiv;
+    }
+});
 
 var AddSpotButton = L.Control.extend({
     options: {
@@ -249,6 +322,7 @@ map.addControl(new FilterButton());
 map.addControl(new FlexBreak());
 map.addControl(removeFilterButtons);
 map.addControl(new FlexBreak());
+map.addControl(new TileToggleControl());
 // Add GPS
 L.control.locate().addTo(map);
 // Add geocoding functionality
@@ -424,10 +498,6 @@ function clear() {
     updateAddSpotLine()
     document.body.classList.remove('adding-spot', 'menu')
 }
-
-$$('.leaflet-control-attribution').innerHTML = `
-    © <a href=https://openstreetmap.org/copyright>OpenStreetMap</a>, <a href=https://hitchmap.com/copyright.html>Hitchmap</a> contributors
-`
 
 if (!window.location.hash.includes(',')) // we'll center on coord
     if (!restoreView.apply(map))
