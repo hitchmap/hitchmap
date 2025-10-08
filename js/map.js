@@ -275,6 +275,8 @@ addAsLeafletControl('#flex-break-3');
 var zoom = $$('.leaflet-control-zoom')
 zoom.parentNode.appendChild(zoom)
 
+addAsLeafletControl('#donate-control', 'bottomright');
+
 $$('#sb-close').onclick = function (e) {
     navigateHome()
 }
