@@ -17,7 +17,7 @@ from tenacity import (
 )
 
 from helpers import get_db, root_dir
-from translate_helpers import are_templates_functionally_same
+from translatehelpers import correct_jinja_template
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -94,19 +94,17 @@ async def translate_and_validate(filename: str, template_content: str, target_la
 
         translated = await translate_template(filename, template_content, target_lang)
         if translated is None:
-            continue
+            raise "couldn't translate " + filename
 
         # Validate the translation
-        is_valid, error_msg = are_templates_functionally_same(template_content, translated)
-
-        if is_valid:
-            return translated, True, ""
-        else:
-            logging.warning(f"Validation failed for {filename}: {error_msg}")
+        try:
+            corrected = correct_jinja_template(template_content, translated)
+            return corrected, True, ""
+        except ValueError as e:
+            logging.warning(f"Validation failed for {filename}: {e}")
             if attempt < max_attempts - 1:
                 logging.info(f"Retrying with higher temperature...")
-
-    return None, False, error_msg
+            raise e
 
 
 # Connect to database
@@ -194,7 +192,8 @@ for target_lang_code, target_lang_name in TARGET_LANGUAGES.items():
             tasks.append((filename, task))
 
         # Execute translations concurrently
-        results = await asyncio.gather(*[task for _, task in tasks], return_exceptions=True)
+        loop = asyncio.get_event_loop()
+        results = loop.run_until_complete(asyncio.gather(*[task for _, task in tasks], return_exceptions=True))
 
         # Save results
         for (filename, _), result in zip(tasks, results):
