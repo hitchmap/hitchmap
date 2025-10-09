@@ -26,8 +26,8 @@ def tokenize(template: str) -> List[Tuple[str, str]]:
 
 
 def get_tag_name(tag: str) -> str:
-    """Extract tag name from HTML tag. Raises error if not found. `!--` is a HTML comment"""
-    match = re.match(r"</?\s*(!--|[\w\-_\.]+)", tag)
+    """Extract tag name from HTML tag. Raises error if not found. `!` is a HTML comment or DOCTYPE"""
+    match = re.match(r"</?\s*(!|[\w\-_\.]+)", tag)
     if not match:
         raise ValueError(f"Cannot extract tag name from: {tag}")
     return match.group(1)

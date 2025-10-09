@@ -32,10 +32,10 @@ client = AsyncOpenAI(
 # Configuration
 TARGET_LANGUAGES = {
     "pl": "Polish",
-    "en": "English",
-    "de": "German",
-    "fr": "French",
-    "es": "Spanish",
+    # "en": "English",
+    # "de": "German",
+    # "fr": "French",
+    # "es": "Spanish",
 }
 
 MODEL = "deepseek-ai/DeepSeek-V3.2-Exp"
@@ -246,8 +246,3 @@ for row in cursor.fetchall():
 
 db_conn.close()
 print("\n=== Translation complete ===")
-
-
-# Run the async code
-if __name__ == "__main__":
-    asyncio.run(main())
