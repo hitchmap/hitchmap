@@ -32,9 +32,8 @@ client = AsyncOpenAI(
 # Configuration
 TARGET_LANGUAGES = {
     "pl": "Polish",
-    # "en": "English",
     # "de": "German",
-    # "fr": "French",
+    "fr": "French",
     # "es": "Spanish",
 }
 
@@ -155,7 +154,7 @@ for filename in template_files:
 
     if result is None or result[0] != content:
         # Template is new or has changed, save it
-        translation_date = datetime.utcnow().isoformat()
+        translation_date = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f")
         cursor.execute(
             """INSERT OR REPLACE INTO template_translations
                 (filename, language, original_content, translated_content, translation_date, is_original)
@@ -245,7 +244,7 @@ for target_lang_code, target_lang_name in TARGET_LANGUAGES.items():
 
             if translated_content:
                 # Save to database with original content
-                translation_date = datetime.utcnow().isoformat()
+                translation_date = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f")
                 cursor.execute(
                     """INSERT OR REPLACE INTO template_translations 
                         (filename, language, original_content, translated_content, translation_date, is_original)

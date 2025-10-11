@@ -52,7 +52,8 @@ outname_recent = os.path.join(dist_dir, "recent.html")
 outname_dups = os.path.join(dist_dir, "recent-dups.html")
 
 # keep right before reading the points
-generation_date = pd.Timestamp.utcnow().isoformat()
+generation_date = pd.Timestamp.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f")
+
 
 points = pd.read_sql(
     sql="select * from points where not banned and revised_by is null order by datetime is not null desc, datetime desc",
@@ -393,7 +394,7 @@ output = template.render(
 with open(outname, "w", encoding="utf-8") as f:
     f.write(output)
 
-if not LIGHT:
+if not LIGHT and not LANG:
     recent = points.dropna(subset=["datetime"]).sort_values("datetime", ascending=False).iloc[:1000]
     recent["url"] = "https://hitchmap.com/#" + recent.lat.astype(str) + "," + recent.lon.astype(str)
     recent["text"] = points.comment.fillna("") + " " + points.extra_text.fillna("")

@@ -35,11 +35,13 @@ client = AsyncOpenAI(
 # Configuration
 TARGET_LANGUAGES = {
     "pl": "Polish",
-    # "en": "English",
+    "fr": "French",
+    "en": "English",
 }
 
 MODEL = "deepseek-ai/DeepSeek-V3.2-Exp"
 MAX_CONCURRENT = 200
+LIMIT = os.getenv("TRANSLATE_LIMIT", 0)
 
 
 @retry(
@@ -97,13 +99,13 @@ db_conn.commit()
 
 # Load points from database
 points = pd.read_sql(
-    """SELECT id, comment, rating 
+    f"""SELECT id, comment, rating 
         FROM points 
         WHERE comment IS NOT NULL 
         AND comment != '' 
         AND not banned 
         AND revised_by IS NULL
-        LIMIT 2000
+        LIMIT {LIMIT}
     """,
     db_conn,
 )
@@ -116,19 +118,17 @@ for idx, point in points.iterrows():
     point_id = point["id"]
     comment = point["comment"]
 
-    # Detect language
-    try:
-        detected_lang = detect(comment)
-    except:
-        detected_lang = "unknown"
-
     # Check if original already saved
-    cursor.execute(
-        "SELECT 1 FROM comment_translations WHERE point_id = ? AND language = ? AND is_original = 1", (point_id, detected_lang)
-    )
+    cursor.execute("SELECT 1 FROM comment_translations WHERE point_id = ? AND is_original = 1", (point_id,))
 
     if cursor.fetchone() is None:
-        translation_date = datetime.utcnow().isoformat()
+        # Detect language
+        try:
+            detected_lang = detect(comment)
+        except:
+            detected_lang = "unknown"
+
+        translation_date = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f")
         cursor.execute(
             """INSERT OR REPLACE INTO comment_translations 
                 (point_id, language, translated_comment, translation_date, is_original)
@@ -182,7 +182,7 @@ for target_lang_code, target_lang_name in TARGET_LANGUAGES.items():
 
             if result:
                 is_original = original_comment.strip() == result.strip()
-                translation_date = datetime.utcnow().isoformat()
+                translation_date = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f")
                 cursor.execute(
                     """INSERT OR REPLACE INTO comment_translations
                         (point_id, language, translated_comment, translation_date, is_original)
