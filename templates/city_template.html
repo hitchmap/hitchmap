@@ -6,7 +6,7 @@
 {% block content %}
 <div class="container mx-auto px-4 py-8">
     <div class="bg-white rounded-lg shadow-lg p-6">
-        <nav><br><a href="/city/index.html" id="back">&lt; All cities</a><br></nav>
+        <nav><a href="/city/index.html" id="back">&lt; All cities</a></nav>
         <article class="mt-6">
             <h2>Hitchhiking from {{city.city}}</h2>
 
@@ -20,7 +20,9 @@
 
             {% for review in reviews.itertuples() %}
             <h4><a href="/#{{ review.lat }},{{review.lon}}">{{ review.lat | round(5) }}, {{review.lon | round(5) }}</a></h4>
-            {{ review.text | safe }}
+            <div class="comment">{{ review.comment }}</div>
+            <br>
+            <div>―{{ review.hitchhiker_str }}{{review.datetime_str}}</div>
             <hr/>
             {% endfor %}
         </article>

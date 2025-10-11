@@ -21,12 +21,32 @@
         <div id="tile-control" class="leaflet-bar horizontal-button">
             <img />
         </div>
+        <details id="lang-control" class="leaflet-bar horizontal-button">
+            <summary>
+                <i class="fa-solid fa-language" style="height: 30px;font-size: 1.5em;padding: 0.25em;"></i>
+            </summary>
+            <div class="lang-dropdown">
+                <a href="/">🌐</a>
+                <a href="/en/">🇬🇧</a>
+                <a href="/pl/">🇵🇱</a>
+                <!-- <a href="/fr/">🇫🇷</a>
+                     <a href="/de/">🇩🇪</a>
+                     <a href="/uk/">🇺🇦</a>
+                     <a href="/pt/">🇵🇹</a>
+                     <a href="/cs/">🇨🇿</a>
+                     <a href="/ru/">🇷🇺</a> -->
+            </div>
+        </details>
         <div id="flex-break-1" class="flex-break" style="display:none"></div>
         <div id="flex-break-2" class="flex-break" style="display:none"></div>
         <div id="flex-break-3" class="flex-break" style="display:none"></div>
         <div id="donate-control">
             <a href="https://liberapay.com/Hitchmap/donate" target="_blank"><img alt="Donate using Liberapay" src="https://liberapay.com/assets/widgets/donate.svg"></a>
         </div>
+    </div>
+    <div id="templates" style="display: none;">
+        <div class="view-original">View original</div>
+        <div class="view-translation">View translation</div>
     </div>
     <div class="sidebar spot-form-container">
         <h3>New Review</h3>
@@ -116,8 +136,8 @@
             </li>
             <li><i class="fa fa-download"></i><a id="export-gpx" href="javascript:;">Download spots as GPX</a></li>
             <li><i class="fa fa-download"></i><a href="/csv-dump.zip">Download spots as CSV</a></li>
-            <li><i class="fa fa-map-pin"></i><a href="/country/index.html">Countries</a></li>
-            <li><i class="fa fa-map-pin"></i><a href="/city/index.html">Cities</a></li>
+            <li><i class="fa fa-map-pin"></i><a href="country/index.html">Countries</a></li>
+            <li><i class="fa fa-map-pin"></i><a href="city/index.html">Cities</a></li>
             <li><i class="fa fa-map-pin"></i><a href="/service-area/index.html">Service areas</a></li>
             <li><i class="fa fa-map-pin"></i><a href="/recent.html">Recent reviews</a></li>
             <li><i class="fa fa-chart-simple"></i><a href="/dashboard.html">Charts & graphs</a></li>
@@ -183,19 +203,31 @@
     </a>
     <div class="topbar spot step1">
         <span>Zoom the crosshairs into your hitchhiking spot. Be as precise as possible!</span>
-        <br><button>Done</button><button>Cancel</button>
+        <br>
+        <button data-action="done">Done</button>
+        <button data-action="cancel">Cancel</button>
     </div>
+
     <div class="topbar spot step2">
         <span>
-            Where did your ride take you? Move the crosshairs near that location, then press done.<sup><a href="javascript:void(0);" title="If you were dropped off at multiple locations when using this spot, either choose something in the middle or leave multiple reviews." class=step2-help>?</a></sup>
+            Where did your ride take you? Move the crosshairs near that location, then press done.
+            <sup>
+                <a href="javascript:void(0);" title="If you were dropped off at multiple locations when using this spot, either choose something in the middle or leave multiple reviews." class="step2-help">?</a>
+            </sup>
         </span>
-        <br><button>Skip</button><button>Done</button><button>Cancel</button>
-    </div>
-    <div class="topbar duplicate">
-        <span>Click on the duplicated marker.</span>
-        <br><button>Cancel</button>
+        <br>
+        <button data-action="skip">Skip</button>
+        <button data-action="done">Done</button>
+        <button data-action="cancel">Cancel</button>
     </div>
     <script>
+        const saved = localStorage.getItem('lang');
+
+        // Auto-redirect homepage to saved language
+        if (location.pathname === '/' && saved && saved !== '/') {
+            location.href = saved + location.search + location.hash;
+        }
+
         var markerData = {{ markers | safe }}
         var reviewData = {{ review_data | safe }}
         var reviewColumns = {{ review_columns | safe }}

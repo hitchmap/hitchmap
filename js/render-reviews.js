@@ -7,10 +7,11 @@ export function renderReviews(reviews) {
     reviews.forEach((review, i) => {
         const reviewElement = document.createElement('div');
         reviewElement.className = 'review';
+        let commentEl;
         
         // Render comment
         if (review[C.COMMENT]) {
-            const commentEl = document.createElement('div');
+            commentEl = document.createElement('div');
             commentEl.className = 'review-comment';
             commentEl.textContent = review[C.COMMENT];
             reviewElement.appendChild(commentEl);
@@ -68,7 +69,7 @@ export function renderReviews(reviews) {
         }
         function formatDateFallback(dateString) {
             if (!dateString) return '';
-            return ', ' + new Date(dateString).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            return ', ' + new Date(dateString).toLocaleDateString(document.documentElement.lang, { month: 'long', year: 'numeric' });
         }
         // Create user link span
         const userLinkSpan = document.createElement('span');
@@ -94,6 +95,60 @@ export function renderReviews(reviews) {
         }
         
         reviewElement.appendChild(authorDateTimeEl);
+
+        // Add translation toggle if not original
+        if (commentEl && !review[C.IS_ORIGINAL]) {
+            const viewOriginalTemplate = document.querySelector('#templates .view-original');
+            const viewTranslationTemplate = document.querySelector('#templates .view-translation');
+            
+            if (viewOriginalTemplate && viewTranslationTemplate) {
+                const toggleDiv = document.createElement('div');
+                
+                const toggleAnchor = document.createElement('a');
+                toggleAnchor.href = '#';
+                toggleAnchor.className = 'toggle-original';
+                toggleAnchor.textContent = viewOriginalTemplate.textContent;
+                toggleAnchor.style.cursor = 'pointer';
+                
+                let isShowingOriginal = false;
+                let originalComment = null;
+                const translatedComment = review[C.COMMENT];
+                
+                toggleAnchor.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    
+                    if (!isShowingOriginal) {
+                        // Load and show original
+                        if (!originalComment) {
+                            try {
+                                const response = await fetch(`/original-comment/${review[C.SHORT_ID]}`);
+                                if (response.ok) {
+                                    const data = await response.json();
+                                    originalComment = data.comment;
+                                }
+                            } catch (error) {
+                                console.error('Failed to load original comment:', error);
+                                return;
+                            }
+                        }
+                        
+                        if (originalComment) {
+                            commentEl.textContent = originalComment;
+                            toggleAnchor.textContent = viewTranslationTemplate.textContent;
+                            isShowingOriginal = true;
+                        }
+                    } else {
+                        // Show translation
+                        commentEl.textContent = translatedComment;
+                        toggleAnchor.textContent = viewOriginalTemplate.textContent;
+                        isShowingOriginal = false;
+                    }
+                });
+                
+                toggleDiv.appendChild(toggleAnchor);
+                reviewElement.appendChild(toggleDiv);
+            }
+        }
         
         // Add HR separator except for the last review
         if (i < reviews.length - 1) {

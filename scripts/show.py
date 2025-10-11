@@ -1,6 +1,8 @@
 import html
+import locale
 import os
 import sys
+import base64
 from jinja2 import Environment, FileSystemLoader
 
 import subprocess
@@ -12,8 +14,20 @@ import geopandas
 import geopandas as gpd
 from helpers import get_bearing, haversine_np, root_dir, get_db, slugify, db_dir
 
-dist_dir = os.path.abspath(os.path.join(root_dir, "dist"))
-template_dir = os.path.abspath(os.path.join(root_dir, "templates"))
+LANG = None
+for arg in sys.argv:
+    if len(arg) == 2:
+        LANG = arg
+
+dist_dir_root = os.path.abspath(os.path.join(root_dir, "dist"))
+
+if LANG:
+    subprocess.run(["python", "translate-templates.py"], check=True, text=True)
+    dist_dir = os.path.abspath(os.path.join(root_dir, "dist", LANG))
+    template_dir = os.path.abspath(os.path.join(dist_dir, "translated-templates"))
+else:
+    dist_dir = dist_dir_root
+    template_dir = os.path.abspath(os.path.join(root_dir, "templates"))
 
 # Set up Jinja2 environment
 env = Environment(loader=FileSystemLoader(template_dir))  # Load templates from current directory
@@ -179,8 +193,6 @@ comment_nl = points["comment"] + "\n\n"
 # show review without comments in the sidebar if they're new; old reviews may be aggregate ratings that don't make sense
 comment_nl.loc[(points.datetime.dt.year > 2021) & points.comment.isnull()] = ""
 
-review_submit_datetime = points.datetime.dt.strftime(", %B %Y").fillna("")
-
 points["username"] = pd.merge(
     left=points[["user_id"]],
     right=users[["id", "username"]],
@@ -191,6 +203,36 @@ points["username"] = pd.merge(
 points["hitchhiker"] = points["nickname"].fillna(points["username"])
 
 points["user_link"] = ("<a href='/?user=" + e(points["hitchhiker"]) + "'>" + e(points["hitchhiker"]) + "</a>").fillna("Anonymous")
+
+# base64 encoded id
+points["short_id"] = points["id"].apply(lambda x: base64.b64encode(x.to_bytes(8, "big")).decode("ascii"))
+
+points["datetime_str"] = points.datetime.dt.strftime(", %B %Y").fillna("")
+points["hitchhiker_str"] = points.hitchhiker.fillna("Anonymous")
+
+if LANG:
+    translations_df = pd.read_sql(
+        """SELECT point_id, translated_comment, is_original
+        FROM comment_translations
+        WHERE language = ?
+        """,
+        get_db(),
+        params=(LANG,),
+    )
+
+    # Merge translations with points
+    points = points.merge(translations_df, left_on="id", right_on="point_id", how="left")
+
+    # Replace comment with translation where available, otherwise keep original
+    points["comment"] = points["translated_comment"].fillna(points["comment"])
+
+    # Set is_original: True if no translation exists (NaN), otherwise use the value from translations
+    points["is_original"] = points["is_original"].fillna(True).astype(bool)
+
+    # Clean up temporary columns
+    points.drop(columns=["point_id", "translated_comment"], inplace=True)
+else:
+    points["is_original"] = True
 
 groups = points.groupby("cluster_id")
 
@@ -212,6 +254,8 @@ review_data = points[
         "country",
         "dest_lat",
         "dest_lon",
+        "short_id",
+        "is_original",
     ]
 ].copy()
 
@@ -269,7 +313,7 @@ elif CITIES:
         os.makedirs(country_folder, exist_ok=True)
         pattern = rf"\b{city.city}\b"
         city_reviews = (
-            points[points.text.str.contains(pattern, case=False, regex=True).astype(bool)].dropna(subset="comment").iloc[:20]
+            points[points.comment.str.contains(pattern, case=False, regex=True).astype(bool)].dropna(subset="comment").iloc[:20]
         )
         rendered_cities.append(len(city_reviews) >= 3)
         if rendered_cities[-1]:
@@ -292,7 +336,7 @@ elif COUNTRIES:
     for country in countries.itertuples():
         pattern = rf"\b{country.name}\b"
         mention_reviews = (
-            points[points.text.str.contains(pattern, case=False, regex=True).astype(bool)].dropna(subset="comment").iloc[:20]
+            points[points.comment.str.contains(pattern, case=False, regex=True).astype(bool)].dropna(subset="comment").iloc[:20]
         )
         country_reviews = points[points.country == country.country].dropna(subset="comment").iloc[:20]
         rendered_countries.append(len(mention_reviews) >= 3)
@@ -322,7 +366,7 @@ try:
 except subprocess.CalledProcessError as e:
     print("DID NOT BUILD JS")
 
-js_output_file = os.path.join(dist_dir, "out.js")
+js_output_file = os.path.join(dist_dir_root, "out.js")
 
 # We embed everything directly into the HTML page so our service worker can't serve inconsistent files
 # For example, if we add a new attribute to the spot which is shown in the front-end, but the user only gets the new

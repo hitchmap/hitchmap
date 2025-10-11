@@ -33,7 +33,7 @@ def get_tag_name(tag: str) -> str:
     return match.group(1)
 
 
-def correct_jinja_template(original: str, translated: str) -> str:
+def correct_jinja_template(original: str, translated: str, target_lang: str) -> str:
     """
     Correct a translated Jinja2 HTML template based on the original.
 
@@ -65,6 +65,8 @@ def correct_jinja_template(original: str, translated: str) -> str:
             trans_tag = get_tag_name(trans_content)
             if orig_tag != trans_tag:
                 raise ValueError(f"Token {i}: tag mismatch (<{orig_tag}> vs <{trans_tag}>)")
+            if orig_tag == "html":
+                orig_content = re.sub(r"""lang\s*=\s*['"]?\w+['"]?""", f'lang="{target_lang}"', orig_content)
             result.append(orig_content)
 
         elif orig_type == "jinja":

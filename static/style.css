@@ -263,23 +263,23 @@ optional section for recording spot data
 from https://developer.mozilla.org/en-US/docs/Web/HTML/Element/details
 */
 
-details {
+.spot-form-container details {
     border: 1px solid #aaa;
     border-radius: 4px;
     padding: 0.5em 0.5em 0;
 }
 
-summary {
+.spot-form-container summary {
     margin: -0.5em -0.5em 0;
     padding: 0.5em;
     cursor: pointer;
 }
 
-details[open] {
+.spot-form-container details[open] {
     padding: 0.5em;
 }
 
-details[open] summary {
+.spot-form-container details[open] summary {
     border-bottom: 1px solid #aaa;
     margin-bottom: 0.5em;
 }
@@ -444,4 +444,38 @@ body.filtering .remove-filter-group {
 }
 .review-author-datetime {
     margin-top: 1em;
+}
+.toggle-original {
+    font-size: 0.8em;
+    margin-top: 1em;
+}
+#lang-control summary {
+    list-style: none;
+    cursor: pointer;
+    background: white;
+    width: 30px;
+    padding: 0;
+}
+
+#lang-control summary::-webkit-details-marker {
+    display: none;
+}
+
+#lang-control summary a {
+    pointer-events: none;
+}
+
+.lang-dropdown {
+    position: absolute;
+    top: 36px;
+    right: -2px;
+    background: white;
+    border: 2px solid rgba(0,0,0,0.2);
+    border-radius: 4px;
+    z-index: 1000;
+}
+.lang-dropdown a {
+    width: 30px !important;
+    height: 30px !important;
+    padding: 0px !important;
 }

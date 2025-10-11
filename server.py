@@ -1,11 +1,12 @@
 import math
+import base64
 import os
 import random
 import re
 from datetime import datetime
 import pandas as pd
 import requests
-from flask import request, send_file, send_from_directory, jsonify
+from flask import request, send_file, send_from_directory, jsonify, redirect
 from flask_security import current_user
 
 from backend.shared import app, db, root_dir, dist_dir, static_dir, EMAIL, logger
@@ -134,8 +135,23 @@ def experience():
     return jsonify({"success": True})
 
 
+@app.route("/original-comment/<short_id>")
+def original(short_id):
+    pid = int.from_bytes(base64.b64decode(short_id), byteorder="big", signed=False)
+    print(pid)
+    with db.engine.connect() as conn:
+        comment = pd.read_sql("select comment from points where id = ?", db.engine, params=(pid,)).iloc[0, 0]
+        return {"comment": comment}
+
+
 @app.route("/<path:path>")
 def serve_static(path):
+    index_path = os.path.join(dist_dir, path, "index.html")
+    if os.path.exists(index_path):
+        if not path.endswith("/"):
+            return redirect(request.path + "/", code=301)
+        return send_from_directory(os.path.join(dist_dir, path), "index.html")
+
     dist_path = os.path.join(dist_dir, path)
 
     if os.path.exists(dist_path):

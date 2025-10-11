@@ -87,19 +87,21 @@ Template to translate:"""
     return file_match.group(1).strip()
 
 
-async def translate_and_validate(filename: str, template_content: str, target_lang: str, max_attempts=3) -> tuple[str, bool, str]:
+async def translate_and_validate(
+    filename: str, template_content: str, target_lang_code: str, target_lang: str, max_attempts=3
+) -> tuple[str, bool, str]:
     """Translate template and validate it matches functionally."""
     for attempt in range(max_attempts):
         logging.info(f"Translating {filename} to {target_lang} (attempt {attempt + 1}/{max_attempts})")
 
         translated = await translate_template(filename, template_content, target_lang)
         if translated is None:
-            raise "couldn't translate " + filename
+            raise Exception(f"couldn't translate {filename}")
 
         # Validate the translation
         try:
-            corrected = correct_jinja_template(template_content, translated)
-            return corrected, True, ""
+            corrected = correct_jinja_template(template_content, translated, target_lang_code)
+            return corrected
         except ValueError as e:
             logging.warning(f"Validation failed for {filename}: {e}")
             if attempt < max_attempts - 1:
@@ -117,6 +119,7 @@ CREATE TABLE IF NOT EXISTS template_translations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     filename TEXT NOT NULL,
     language TEXT NOT NULL,
+    original_content TEXT NOT NULL,
     translated_content TEXT NOT NULL,
     translation_date TEXT NOT NULL,
     is_original INTEGER NOT NULL DEFAULT 0,
@@ -143,19 +146,32 @@ for filename in template_files:
     with open(full_path, "r", encoding="utf-8") as f:
         content = f.read()
 
-    # Check if original already saved
-    cursor.execute("SELECT 1 FROM template_translations WHERE filename = ? AND language = 'en' AND is_original = 1", (filename,))
+    # Check if original already saved and if it has changed
+    cursor.execute(
+        "SELECT original_content FROM template_translations WHERE filename = ? AND language = 'en' AND is_original = 1",
+        (filename,),
+    )
+    result = cursor.fetchone()
 
-    if cursor.fetchone() is None:
+    if result is None or result[0] != content:
+        # Template is new or has changed, save it
         translation_date = datetime.utcnow().isoformat()
         cursor.execute(
             """INSERT OR REPLACE INTO template_translations
-                (filename, language, translated_content, translation_date, is_original)
-                VALUES (?, ?, ?, ?, 1)""",
-            (filename, "en", content, translation_date),
+                (filename, language, original_content, translated_content, translation_date, is_original)
+                VALUES (?, ?, ?, ?, ?, 1)""",
+            (filename, "en", content, content, translation_date),
         )
         db_conn.commit()
-        logging.info(f"Saved original for {filename}")
+
+        if result is None:
+            logging.info(f"Saved original for {filename}")
+        else:
+            logging.info(f"Updated original for {filename} (template changed)")
+            # Delete existing translations for this file since the source changed
+            cursor.execute("DELETE FROM template_translations WHERE filename = ? AND language != 'en'", (filename,))
+            db_conn.commit()
+            logging.info(f"Deleted old translations for {filename}")
 
 # Step 2: Translate to target languages
 for target_lang_code, target_lang_name in TARGET_LANGUAGES.items():
@@ -164,14 +180,35 @@ for target_lang_code, target_lang_name in TARGET_LANGUAGES.items():
 
     print(f"\n=== Translating to {target_lang_name} ({target_lang_code}) ===")
 
-    # Check which files already have translations
-    cursor.execute("SELECT filename FROM template_translations WHERE language = ? AND is_original = 0", (target_lang_code,))
-    existing_files = {row[0] for row in cursor.fetchall()}
+    # Check which files need translation (either don't exist or source has changed)
+    files_to_translate = []
 
-    files_to_translate = [f for f in template_files if f not in existing_files]
+    for filename in template_files:
+        # Get the current original content
+        cursor.execute(
+            "SELECT original_content FROM template_translations WHERE filename = ? AND language = 'en' AND is_original = 1",
+            (filename,),
+        )
+        original_row = cursor.fetchone()
 
-    print(f"Already translated: {len(existing_files)}")
-    print(f"Remaining: {len(files_to_translate)}")
+        if original_row is None:
+            continue  # Skip if no original saved
+
+        current_original = original_row[0]
+
+        # Check if translation exists and if it's based on the current original
+        cursor.execute(
+            "SELECT original_content FROM template_translations WHERE filename = ? AND language = ? AND is_original = 0",
+            (filename, target_lang_code),
+        )
+        translation_row = cursor.fetchone()
+
+        if translation_row is None or translation_row[0] != current_original:
+            # No translation exists or it's based on old original content
+            files_to_translate.append(filename)
+
+    print(f"Already translated: {len(template_files) - len(files_to_translate)}")
+    print(f"Need translation: {len(files_to_translate)}")
 
     if len(files_to_translate) == 0:
         continue
@@ -184,38 +221,41 @@ for target_lang_code, target_lang_name in TARGET_LANGUAGES.items():
         # Create translation tasks
         tasks = []
         for filename in batch:
-            full_path = os.path.join(TEMPLATES_DIR, filename)
-            with open(full_path, "r", encoding="utf-8") as f:
-                content = f.read()
+            # Get original content from database
+            cursor.execute(
+                "SELECT original_content FROM template_translations WHERE filename = ? AND language = 'en' AND is_original = 1",
+                (filename,),
+            )
+            content = cursor.fetchone()[0]
 
-            task = translate_and_validate(filename, content, target_lang_name)
-            tasks.append((filename, task))
+            task = translate_and_validate(filename, content, target_lang_code, target_lang_name)
+            tasks.append((filename, content, task))
 
         # Execute translations concurrently
         loop = asyncio.get_event_loop()
-        results = loop.run_until_complete(asyncio.gather(*[task for _, task in tasks], return_exceptions=True))
+        results = loop.run_until_complete(asyncio.gather(*[task for _, _, task in tasks], return_exceptions=True))
 
         # Save results
-        for (filename, _), result in zip(tasks, results):
+        for (filename, original_content, _), result in zip(tasks, results):
             if isinstance(result, Exception):
                 logging.error(f"Failed to translate {filename}: {result}")
                 continue
 
-            translated_content, is_valid, error_msg = result
+            translated_content = result
 
-            if is_valid and translated_content:
-                # Save to database
+            if translated_content:
+                # Save to database with original content
                 translation_date = datetime.utcnow().isoformat()
                 cursor.execute(
                     """INSERT OR REPLACE INTO template_translations 
-                        (filename, language, translated_content, translation_date, is_original)
-                        VALUES (?, ?, ?, ?, 0)""",
-                    (filename, target_lang_code, translated_content, translation_date),
+                        (filename, language, original_content, translated_content, translation_date, is_original)
+                        VALUES (?, ?, ?, ?, ?, 0)""",
+                    (filename, target_lang_code, original_content, translated_content, translation_date),
                 )
                 db_conn.commit()
 
                 # Write to file
-                output_dir = os.path.join(root_dir, "dist", "translated-templates", target_lang_code)
+                output_dir = os.path.join(root_dir, "dist", target_lang_code, "translated-templates")
                 output_path = os.path.join(output_dir, filename)
                 os.makedirs(os.path.dirname(output_path), exist_ok=True)
 

@@ -5,7 +5,7 @@
 {% block content %}
 <div class="container mx-auto px-4 py-8">
     <div class="bg-white rounded-lg shadow-lg p-6">
-        <nav><br><a href="/country/index.html" id="back">&lt; All countries</a><br></nav>
+        <nav><a href="/country/index.html" id="back">&lt; All countries</a></nav>
         <article class="mt-6">
             <h2>Hitchhiking in {{country.name}}</h2>
             <a class="map-link" href="/#location,{{country.lat}},{{country.lon}},7"><div id="static-map"></div><span class="map-overlay">{{country.name}} on Hitchmap</span> </a>
@@ -14,13 +14,17 @@
             <h3>Recent reviews in {{country.name}}</h3>
             {% for review in country_reviews.itertuples() %}
             <h4><a href="/#{{ review.lat }},{{review.lon}}">{{ review.lat | round(5) }}, {{review.lon | round(5) }}</a></h4>
-            {{ review.text | safe }}
+            <div class="comment">{{ review.comment }}</div>
+            <br>
+            <div>―{{ review.hitchhiker_str }}{{review.datetime_str}}</div>
             <hr/>
             {% endfor %}
             <h3>Recent reviews mentioning {{country.name}}</h3>
             {% for review in mention_reviews.itertuples() %}
             <h4><a href="/#{{ review.lat }},{{review.lon}}">{{ review.lat | round(5) }}, {{review.lon | round(5) }}</a></h4>
-            {{ review.text | safe }}
+            <div class="comment">{{ review.comment }}</div>
+            <br>
+            <div>―{{ review.hitchhiker_str }}{{review.datetime_str}}</div>
             <hr/>
             {% endfor %}
         </article>

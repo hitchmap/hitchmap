@@ -35,11 +35,11 @@ client = AsyncOpenAI(
 # Configuration
 TARGET_LANGUAGES = {
     "pl": "Polish",
-    "en": "English",
+    # "en": "English",
 }
 
 MODEL = "deepseek-ai/DeepSeek-V3.2-Exp"
-MAX_CONCURRENT = 5
+MAX_CONCURRENT = 200
 
 
 @retry(
@@ -103,7 +103,7 @@ points = pd.read_sql(
         AND comment != '' 
         AND not banned 
         AND revised_by IS NULL
-        LIMIT 20
+        LIMIT 2000
     """,
     db_conn,
 )
@@ -124,13 +124,13 @@ for idx, point in points.iterrows():
 
     # Check if original already saved
     cursor.execute(
-        "SELECT 1 FROM translations WHERE point_id = ? AND language = ? AND is_original = 1", (point_id, detected_lang)
+        "SELECT 1 FROM comment_translations WHERE point_id = ? AND language = ? AND is_original = 1", (point_id, detected_lang)
     )
 
     if cursor.fetchone() is None:
         translation_date = datetime.utcnow().isoformat()
         cursor.execute(
-            """INSERT OR REPLACE INTO translations 
+            """INSERT OR REPLACE INTO comment_translations 
                 (point_id, language, translated_comment, translation_date, is_original)
                 VALUES (?, ?, ?, ?, 1)""",
             (point_id, detected_lang, comment, translation_date),
@@ -142,8 +142,8 @@ for idx, point in points.iterrows():
 for target_lang_code, target_lang_name in TARGET_LANGUAGES.items():
     print(f"\n=== Translating to {target_lang_name} ({target_lang_code}) ===")
 
-    # Check which points already have translations
-    cursor.execute("SELECT point_id FROM translations WHERE language = ?", (target_lang_code,))
+    # Check which points already have comment_translations
+    cursor.execute("SELECT point_id FROM comment_translations WHERE language = ?", (target_lang_code,))
     existing_ids = {row[0] for row in cursor.fetchall()}
 
     points_to_translate = points[~points["id"].isin(existing_ids)]
@@ -163,31 +163,34 @@ for target_lang_code, target_lang_name in TARGET_LANGUAGES.items():
         tasks = []
         for idx, point in batch.iterrows():
             task = get_translation(point["id"], point["comment"], int(point["rating"]), target_lang_name)
-            tasks.append((point["id"], task))
+            tasks.append((point["id"], point["comment"], task))
 
         # Execute translations concurrently
         loop = asyncio.get_event_loop()
-        results = loop.run_until_complete(asyncio.gather(*[task for _, task in tasks], return_exceptions=True))
+        results = loop.run_until_complete(asyncio.gather(*[task for _, _, task in tasks], return_exceptions=True))
 
         # Save results
-        for (point_id, _), result in zip(tasks, results):
+        for (point_id, original_comment, _), result in zip(tasks, results):
             if isinstance(result, Exception):
                 logging.error(f"Failed to translate point {point_id}: {result}")
+                # Small delay after errors to avoid repeating
+                time.sleep(1)
                 continue
 
-            if result and result != "< NA >":
+            if result == "< NA >":
+                result = original_comment
+
+            if result:
+                is_original = original_comment.strip() == result.strip()
                 translation_date = datetime.utcnow().isoformat()
                 cursor.execute(
-                    """INSERT OR REPLACE INTO translations 
+                    """INSERT OR REPLACE INTO comment_translations
                         (point_id, language, translated_comment, translation_date, is_original)
-                        VALUES (?, ?, ?, ?, 0)""",
-                    (point_id, target_lang_code, result, translation_date),
+                        VALUES (?, ?, ?, ?, ?)""",
+                    (point_id, target_lang_code, result, translation_date, is_original),
                 )
                 db_conn.commit()
                 logging.info(f"Translated point {point_id} to {target_lang_code}")
-
-        # Small delay between batches to avoid rate limits
-        time.sleep(1)
 
 # Step 3: Generate HTML report
 print("\n=== Generating HTML report ===")
@@ -202,7 +205,7 @@ translations = pd.read_sql(
         t.translated_comment,
         t.translation_date,
         t.is_original
-    FROM translations t
+    FROM comment_translations t
     JOIN points p ON t.point_id = p.id
     ORDER BY t.translation_date DESC, t.point_id, t.language
     """,
@@ -237,7 +240,7 @@ if len(translations) > 0:
     output_path = os.path.join(root_dir, "dist", "translations.html")
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-    translations[output_cols].to_html(
+    translations.loc[translations.language == "pl", output_cols].to_html(
         output_path, render_links=True, index=False, escape=False, classes="table table-striped", border=0
     )
 

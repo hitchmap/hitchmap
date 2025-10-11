@@ -264,6 +264,8 @@ img.addEventListener('click', e => {
     toggleLayer();
 });
 
+addAsLeafletControl('#lang-control');
+
 // GPS and geocoder remain in the same sequence
 L.control.locate().addTo(map);
 addGeocoder(map);
@@ -298,46 +300,51 @@ map.on('move', updateAddSpotLine)
 
 const errorMessage = document.getElementById('nickname-error-message');
 
-// Handle multi-step spot addition process
 var addSpotStep = function (e) {
-    if (e.target.tagName != 'BUTTON') return
-    if (e.target.innerText == 'Done') {
+    const action = e.target.dataset.action
+    if (!action) return
+
+    if (action === 'done') {
         let center = map.getCenter()
-        if (addSpotPoints[0] && center.distanceTo(addSpotPoints[0]) < 1000 && !confirm("Are you sure this was where the car took you? It's less than 1 km away from the hitchhiking spot."))
+        if (
+            addSpotPoints[0] &&
+            center.distanceTo(addSpotPoints[0]) < 1000 &&
+            !confirm("Are you sure this was where the car took you? It's less than 1 km away from the hitchhiking spot.")
+        ) {
             return
-        else
+        } else {
             addSpotPoints.push(center)
+        }
     }
-    if (e.target.innerText.includes("didn't get"))
-        addSpotPoints.push(addSpotPoints[0])
-    if (e.target.innerText == "Skip")
+
+    if (action === 'skip') {
         addSpotPoints.push({ lat: 'nan', lng: 'nan' })
-    if (e.target.innerText.includes('Review')) {
+    }
+
+    if (action === 'review') {
         addSpotPoints.push(active[0].getLatLng())
         active = []
     }
 
     renderPoints()
 
-    if (e.target.innerText == 'Done' || e.target.innerText.includes("didn't get") || e.target.innerText.includes('Review') || e.target.innerText == "Skip") {
-        if (addSpotPoints.length == 1) {
-            if (map.getZoom() > 9) map.setZoom(9);
+    if (['done', 'review', 'skip'].includes(action)) {
+        if (addSpotPoints.length === 1) {
+            if (map.getZoom() > 9) map.setZoom(9)
             map.panTo(addSpotPoints[0])
             bar('.topbar.spot.step2')
-        }
-        else if (addSpotPoints.length == 2) {
+        } else if (addSpotPoints.length === 2) {
             const destinationProvided = addSpotPoints[1].lat !== 'nan'
-            
+
             if (destinationProvided) {
-                var bounds = new L.LatLngBounds(addSpotPoints);
+                var bounds = new L.LatLngBounds(addSpotPoints)
                 map.fitBounds(bounds, {})
             }
             map.setZoom(map.getZoom() - 1)
 
             initializeSpotForm(addSpotPoints, destinationProvided)
         }
-    }
-    else if (e.target.innerText == 'Cancel') {
+    } else if (action === 'cancel') {
         navigateHome()
     }
 
@@ -553,3 +560,20 @@ if (window.location.hash == '#registered') {
 }
 
 document.querySelector('#export-gpx').onclick = exportAsGPX
+
+const langControl = document.getElementById('lang-control');
+document.addEventListener('click', (e) => {
+    if (!langControl.contains(e.target)) {
+        langControl.removeAttribute('open');
+    }
+});
+
+// Save language choice on click
+document.querySelectorAll('.lang-dropdown a').forEach(a => {
+    a.onclick = e => {
+        e.preventDefault();
+        const path = a.getAttribute('href');
+        localStorage.setItem('lang', path);
+        location.href = path + location.search + location.hash;
+    };
+});
