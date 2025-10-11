@@ -3,6 +3,7 @@
 * * * * * cd hitch && /usr/bin/flock -n /tmp/show.lockfile bash -c '. $HOME/.bashrc; /home/bob/.asdf/shims/python scripts/show.py' > cronlog.txt 2>&1
 * * * * * cd hitch && /usr/bin/flock -n /tmp/show-pl.lockfile bash -c '. $HOME/.bashrc; /home/bob/.asdf/shims/python scripts/show.py pl' > cronlog-pl.txt 2>&1
 * * * * * cd hitch && /usr/bin/flock -n /tmp/show-fr.lockfile bash -c '. $HOME/.bashrc; /home/bob/.asdf/shims/python scripts/show.py fr' > cronlog-fr.txt 2>&1
+* * * * * cd hitch && /usr/bin/flock -n /tmp/show-en.lockfile bash -c '. $HOME/.bashrc; /home/bob/.asdf/shims/python scripts/show.py en' > cronlog-en.txt 2>&1
 # each day at 6
 0 6 * * * cd hitch && bash -c '. $HOME/.bashrc; /home/bob/.asdf/shims/python scripts/dump.py' > dumplog.txt 2>&1
 # each day at 4

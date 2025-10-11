@@ -48,6 +48,9 @@ def correct_jinja_template(original: str, translated: str, target_lang: str) -> 
     trans_tokens = tokenize(translated)
 
     if len(orig_tokens) != len(trans_tokens):
+        print(orig_tokens)
+        print("TRANS")
+        print(trans_tokens)
         raise ValueError(f"Token count mismatch: {len(orig_tokens)} vs {len(trans_tokens)}")
 
     result = []

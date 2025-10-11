@@ -137,7 +137,7 @@ def experience():
 
 @app.route("/original-comment/<short_id>")
 def original(short_id):
-    pid = int.from_bytes(base64.b64decode(short_id), byteorder="big", signed=False)
+    pid = int.from_bytes(base64.urlsafe_b64decode(short_id), byteorder="big", signed=False)
     print(pid)
     with db.engine.connect() as conn:
         comment = pd.read_sql("select comment from points where id = ?", db.engine, params=(pid,)).iloc[0, 0]

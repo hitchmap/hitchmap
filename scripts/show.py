@@ -12,17 +12,20 @@ import numpy as np
 import pandas as pd
 import geopandas
 import geopandas as gpd
-from helpers import get_bearing, haversine_np, root_dir, get_db, slugify, db_dir
+import re
+from helpers import get_bearing, haversine_np, root_dir, get_db, slugify, db_dir, scripts_dir
 
 LANG = None
 for arg in sys.argv:
-    if len(arg) == 2:
+    if re.fullmatch(r"[a-z]{2}", arg):
         LANG = arg
+
+print("LANG", LANG)
 
 dist_dir_root = os.path.abspath(os.path.join(root_dir, "dist"))
 
 if LANG:
-    subprocess.run(["python", "translate-templates.py"], check=True, text=True)
+    subprocess.run(["python", "translate-templates.py", LANG], check=True, text=True, cwd=scripts_dir)
     dist_dir = os.path.abspath(os.path.join(root_dir, "dist", LANG))
     template_dir = os.path.abspath(os.path.join(dist_dir, "translated-templates"))
 else:
@@ -206,7 +209,7 @@ points["hitchhiker"] = points["nickname"].fillna(points["username"])
 points["user_link"] = ("<a href='/?user=" + e(points["hitchhiker"]) + "'>" + e(points["hitchhiker"]) + "</a>").fillna("Anonymous")
 
 # base64 encoded id
-points["short_id"] = points["id"].apply(lambda x: base64.b64encode(x.to_bytes(8, "big")).decode("ascii"))
+points["short_id"] = points["id"].apply(lambda x: base64.urlsafe_b64encode(x.to_bytes(8, "big")).decode("ascii"))
 
 points["datetime_str"] = points.datetime.dt.strftime(", %B %Y").fillna("")
 points["hitchhiker_str"] = points.hitchhiker.fillna("Anonymous")

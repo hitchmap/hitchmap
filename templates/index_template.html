@@ -51,7 +51,7 @@
     <div class="sidebar spot-form-container">
         <h3>New Review</h3>
         <p class=greyed></p>
-        <form id=spot-form action=experience method=post>
+        <form id=spot-form action="/experience" method=post>
             <input type="hidden" name="coords">
             <label>How do you rate the spot?</label>
             <div class="clear">
@@ -106,10 +106,10 @@
     <div class="sidebar show-spot spot">
         <h3 id="spot-header"><a target="_blank"></a></h3>
         <div id='spot-summary'></div>
-        <div><button class="no-margin-bottom">Review this spot</button></div>
+        <div><button class="no-margin-bottom" data-action="review">Review this spot</button></div>
         <h4>Reviews</h4>
         <div id='spot-text'></div>
-        <div id="extra-review-button"><button>Review this spot</button></div>
+        <div id="extra-review-button"><button data-action="review">Review this spot</button></div>
         <hr>
     </div>
     <div class="sidebar success">

@@ -59,7 +59,7 @@ $$(".sidebar.show-spot").addEventListener("click", function (event) {
     const linkUrl = new URL(link.href, window.location.origin);
 
     if (linkUrl.origin === window.location.origin) {
-        e.preventDefault()
+        event.preventDefault()
         history.pushState({}, "", link.href); // Update the URL without reloading
         navigate();
     }

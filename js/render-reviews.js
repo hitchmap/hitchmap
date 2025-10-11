@@ -105,7 +105,7 @@ export function renderReviews(reviews) {
                 const toggleDiv = document.createElement('div');
                 
                 const toggleAnchor = document.createElement('a');
-                toggleAnchor.href = '#';
+                toggleAnchor.href = 'javascript:;';
                 toggleAnchor.className = 'toggle-original';
                 toggleAnchor.textContent = viewOriginalTemplate.textContent;
                 toggleAnchor.style.cursor = 'pointer';

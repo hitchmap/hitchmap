@@ -4,6 +4,7 @@ import os
 import re
 from datetime import datetime
 from pathlib import Path
+import sys
 
 import httpx
 import time
@@ -32,10 +33,13 @@ client = AsyncOpenAI(
 # Configuration
 TARGET_LANGUAGES = {
     "pl": "Polish",
-    # "de": "German",
     "fr": "French",
-    # "es": "Spanish",
 }
+
+LANG = None
+for arg in sys.argv:
+    if re.fullmatch(r"[a-z]{2}", arg):
+        TARGET_LANGUAGES = {arg: TARGET_LANGUAGES[arg]}
 
 MODEL = "deepseek-ai/DeepSeek-V3.2-Exp"
 MAX_CONCURRENT = 3
@@ -162,6 +166,12 @@ for filename in template_files:
             (filename, "en", content, content, translation_date),
         )
         db_conn.commit()
+        output_dir = os.path.join(root_dir, "dist", "en", "translated-templates")
+        output_path = os.path.join(output_dir, filename)
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(content)
 
         if result is None:
             logging.info(f"Saved original for {filename}")
