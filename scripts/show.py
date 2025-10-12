@@ -65,6 +65,8 @@ points = pd.read_sql(
 
 points["user_id"] = points["user_id"].astype(pd.Int64Dtype())
 
+# CAUTION: currently we do not review nor accept reported duplicated
+# thus here all reported duplicates are selected
 duplicates = pd.read_sql("select * from duplicates where reviewed = accepted", get_db())
 
 # merging and transforming data
