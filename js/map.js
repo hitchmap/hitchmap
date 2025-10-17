@@ -6,6 +6,7 @@ import {restoreView, storageAvailable, summaryText, closestMarker} from './utils
 import {currentUser, firstUserPromise, userMarkerGroup, createUserMarkers} from './user';
 import {pendingGroup, updatePendingMarkers, addPending} from './pending';
 import {renderReviews} from './render-reviews';
+import {maybeAddNetworkButton} from './network-button';
 
 // Register service worker for offline functionality
 if ("serviceWorker" in navigator) {
@@ -265,6 +266,7 @@ img.addEventListener('click', e => {
 });
 
 addAsLeafletControl('#lang-control');
+maybeAddNetworkButton();
 
 // GPS and geocoder remain in the same sequence
 L.control.locate().addTo(map);

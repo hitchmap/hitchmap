@@ -465,6 +465,15 @@ body.filtering .remove-filter-group {
     pointer-events: none;
 }
 
+.small-centered-icon {
+    width: 30px;
+    height: 30px;
+    font-size: 1.2em;
+    line-height: 30px;
+    background: #fff;
+    cursor: pointer;
+}
+
 .lang-dropdown {
     position: absolute;
     top: 36px;
@@ -474,8 +483,6 @@ body.filtering .remove-filter-group {
     border-radius: 4px;
     z-index: 1000;
 }
-.lang-dropdown a {
-    width: 30px !important;
-    height: 30px !important;
-    padding: 0px !important;
+.disabled {
+    color: #999 !important;
 }
