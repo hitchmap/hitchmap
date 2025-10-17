@@ -403,9 +403,9 @@ ul.no-style {
 }
 .knob-container, .knob-container * {
     box-sizing: content-box;
+    touch-action: none;
 }
 #knob-toggle:not(:checked) ~ .knob-container {
-    pointer-events: none;
     opacity: 0.5;
 }
 #knob-toggle {

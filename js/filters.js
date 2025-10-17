@@ -61,15 +61,16 @@ clearFilters.onclick = () => {
     clearParams()
 }
 
-knob.addEventListener('mousedown', (e) => {
+knob.addEventListener('pointerdown', (e) => {
     isDragging = true;
+    setQueryParameter('mydirection', true);
     updateRotation(e);
     const angle = Math.round(radAngle * (180 / Math.PI) + 90) % 360;
     const normalizedAngle = (angle + 360) % 360; // Normalize angle
     setQueryParameter('direction', normalizedAngle);
 });
 
-window.addEventListener('mousemove', (e) => {
+window.addEventListener('pointermove', (e) => {
     if (isDragging) {
         updateRotation(e);
         const angle = Math.round(radAngle * (180 / Math.PI) + 90) % 360;
@@ -78,7 +79,7 @@ window.addEventListener('mousemove', (e) => {
     }
 });
 
-window.addEventListener('mouseup', () => {
+window.addEventListener('pointerup', () => {
     isDragging = false;
 });
 
