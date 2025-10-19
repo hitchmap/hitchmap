@@ -7,6 +7,7 @@ import {currentUser, firstUserPromise, userMarkerGroup, createUserMarkers} from 
 import {pendingGroup, updatePendingMarkers, addPending} from './pending';
 import {renderReviews} from './render-reviews';
 import {maybeAddNetworkButton} from './network-button';
+import './track-button';
 
 // Register service worker for offline functionality
 if ("serviceWorker" in navigator) {
@@ -266,7 +267,7 @@ img.addEventListener('click', e => {
 });
 
 addAsLeafletControl('#lang-control');
-maybeAddNetworkButton();
+// maybeAddNetworkButton();
 
 // GPS and geocoder remain in the same sequence
 L.control.locate().addTo(map);
@@ -280,6 +281,8 @@ var zoom = $$('.leaflet-control-zoom')
 zoom.parentNode.appendChild(zoom)
 
 addAsLeafletControl('#donate-control', 'bottomright');
+
+if (window.Capacitor) addAsLeafletControl('#location-tracking-control', 'bottomright');
 
 $$('#sb-close').onclick = function (e) {
     navigateHome()

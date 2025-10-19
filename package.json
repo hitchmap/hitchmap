@@ -1,24 +1,36 @@
 {
-  "name": "hitch",
-  "version": "1.0.0",
-  "description": "The map to hitchhiking the world. Read more [here](https://hitchwiki.org/en/Hitchwiki:Maps).",
-  "main": "js/map.js",
-  "scripts": {
-    "test": "node js/e2e.js",
-    "build": "esbuild js/map.js --bundle --outfile=dist/out.js"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/bopjesvla/hitch.git"
-  },
-  "author": "",
-  "license": "SEE LICENSE IN LICENSE.md and README",
-  "bugs": {
-    "url": "https://github.com/bopjesvla/hitch/issues"
-  },
-  "homepage": "https://github.com/bopjesvla/hitch#readme",
-  "dependencies": {
-    "esbuild": "^0.24.2",
-    "playwright": "^1.50.1"
-  }
+    "name": "hitch",
+    "version": "1.0.0",
+    "description": "The map to hitchhiking the world. Read more [here](https://hitchwiki.org/en/Hitchwiki:Maps).",
+    "main": "js/map.js",
+    "scripts": {
+        "test": "node js/e2e.js",
+        "build": "esbuild js/map.js --bundle --outfile=dist/out.js --external:'@capacitor/core'",
+        "cap:sync": "npm run build && cap sync",
+        "cap:open:ios": "cap open ios",
+        "cap:open:android": "cap open android"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/bopjesvla/hitch.git"
+    },
+    "author": "",
+    "license": "SEE LICENSE IN LICENSE.md and README",
+    "bugs": {
+        "url": "https://github.com/bopjesvla/hitch/issues"
+    },
+    "homepage": "https://github.com/bopjesvla/hitch#readme",
+    "dependencies": {
+        "esbuild": "^0.24.2",
+        "playwright": "^1.50.1",
+        "@capacitor/android": "^5.5.0",
+        "@capacitor/app": "^5.0.6",
+        "@capacitor/core": "^5.5.0",
+        "@capacitor/geolocation": "^5.0.6",
+        "@capacitor/ios": "^5.5.0",
+        "@capacitor-community/background-geolocation": "^1.2.17"
+    },
+    "devDependencies": {
+        "@capacitor/cli": "^5.5.0"
+    }
 }

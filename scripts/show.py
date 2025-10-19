@@ -26,7 +26,7 @@ dist_dir_root = os.path.abspath(os.path.join(root_dir, "dist"))
 
 if LANG:
     subprocess.run(["python", "translate-templates.py", LANG], check=True, text=True, cwd=scripts_dir)
-    dist_dir = os.path.abspath(os.path.join(root_dir, "dist", LANG))
+    dist_dir = os.path.abspath(os.path.join(dist_dir_root, LANG))
     template_dir = os.path.abspath(os.path.join(dist_dir, "translated-templates"))
 else:
     dist_dir = dist_dir_root

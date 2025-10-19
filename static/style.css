@@ -486,3 +486,6 @@ body.filtering .remove-filter-group {
 .disabled {
     color: #999 !important;
 }
+body.tracking #start-tracking, body:not(.tracking) #stop-tracking {
+    display: none;
+}
