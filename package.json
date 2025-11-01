@@ -5,10 +5,12 @@
     "main": "js/map.js",
     "scripts": {
         "test": "node js/e2e.js",
-        "build": "esbuild js/map.js --bundle --outfile=dist/out.js --external:'@capacitor/core'",
-        "cap:sync": "npm run build && cap sync",
-        "cap:open:ios": "cap open ios",
-        "cap:open:android": "cap open android"
+        "build": "esbuild js/map.js --bundle --outfile=dist/out.js --external:@capacitor/core",
+        "cap:sync": "npm run build && npx cap sync",
+        "cap:open:ios": "npx cap open ios",
+        "cap:open:android": "npx cap open android",
+        "cap:doctor": "npx cap doctor",
+        "cap:update": "npx cap update"
     },
     "repository": {
         "type": "git",
@@ -21,16 +23,21 @@
     },
     "homepage": "https://github.com/bopjesvla/hitch#readme",
     "dependencies": {
+        "@capacitor/android": "^7.0.0",
+        "@capacitor/app": "^7.0.0",
+        "@capacitor/cli": "^7.0.0",
+        "@capacitor/core": "^7.0.0",
+        "@capacitor/ios": "^7.0.0",
+        "@capacitor/share": "^7.0.2",
+        "@capacitor/splash-screen": "^7.0.3",
+        "@capawesome/capacitor-android-edge-to-edge-support": "^7.2.3",
+        "cordova-background-geolocation-plugin": "^2.3.3",
+        "cordova-plugin-device-orientation": "^3.0.0",
         "esbuild": "^0.24.2",
-        "playwright": "^1.50.1",
-        "@capacitor/android": "^5.5.0",
-        "@capacitor/app": "^5.0.6",
-        "@capacitor/core": "^5.5.0",
-        "@capacitor/geolocation": "^5.0.6",
-        "@capacitor/ios": "^5.5.0",
-        "@capacitor-community/background-geolocation": "^1.2.17"
+        "playwright": "^1.50.1"
     },
-    "devDependencies": {
-        "@capacitor/cli": "^5.5.0"
+    "engines": {
+        "node": ">=20.0.0",
+        "npm": ">=9.0.0"
     }
 }

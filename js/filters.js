@@ -1,5 +1,5 @@
-import { C } from './utils.js';
-
+import { C } from './utils';
+import { drawRecordings, lastCoordinate } from './recordings'
 const knob = document.getElementById('knob');
 const knobLine = document.getElementById('knobLine');
 const knobCone = document.getElementById('knobCone');
@@ -16,9 +16,13 @@ const clearFilters = document.getElementById('clear-filters');
 
 let isDragging = false, radAngle = 0;
 
-export let filterDestLineGroup = null,
-    filterMarkerGroup = null;
+let shareSecret, fetchInterval, sharedRecordings;
 
+export let lastSharedCoord;
+
+export let filterDestLineGroup = null,
+filterMarkerGroup = null,
+sharedRecordingGroup = L.layerGroup();
 
 const RemoveFilterButtons = L.Control.extend({
     options: {
@@ -26,9 +30,6 @@ const RemoveFilterButtons = L.Control.extend({
     },
     onAdd: function (map) {
         this.filterButtons = L.DomUtil.create('div', 'remove-filter-group');
-        // TODO: add a leaflet-bar with an a for every active filter
-        // var controlDiv = L.DomUtil.create('div', 'leaflet-bar horizontal-button remove-filter', this.filterButtons);
-        // var container = L.DomUtil.create('a', '', controlDiv);
         return this.filterButtons
     }
 });
@@ -155,7 +156,7 @@ export function applyParams() {
                 .map(u => u.trim().toLowerCase())
                 .filter(u => u.length > 0);
 
-            filteredReviews = filteredReviews.filter(review => 
+            filteredReviews = filteredReviews.filter(review =>
                 review[C.HITCHHIKER] && users.includes(review[C.HITCHHIKER].toLowerCase())
             );
         }
@@ -181,7 +182,7 @@ export function applyParams() {
         // Apply text filter
         if (textFilter.value) {
             const searchText = textFilter.value.toLowerCase();
-            filteredReviews = filteredReviews.filter(review => 
+            filteredReviews = filteredReviews.filter(review =>
                 review[C.COMMENT] && review[C.COMMENT].toLowerCase().includes(searchText)
             );
         }
@@ -189,7 +190,7 @@ export function applyParams() {
         // Apply distance filter
         if (distanceFilter.value) {
             const minDistance = parseFloat(distanceFilter.value);
-            filteredReviews = filteredReviews.filter(review => 
+            filteredReviews = filteredReviews.filter(review =>
                 review[C.RIDE_DISTANCE] && review[C.RIDE_DISTANCE] >= minDistance
             );
         }
@@ -233,17 +234,78 @@ export function applyParams() {
         filterMarkerGroup = L.layerGroup(
             filterMarkers.reverse(), { pane: 'filtering' }
         ).addTo(window.map);
-        
+
         document.body.classList.add('filtering');
     } else {
         document.body.classList.remove('filtering');
+    }
+
+    const newShareSecret = getQueryParameter('share-secret');
+
+
+    if (newShareSecret != shareSecret) {
+        document.body.classList.toggle('has-share-secret', !!newShareSecret);
+        shareSecret = newShareSecret;
+
+        // Clear any existing interval
+        if (fetchInterval) {
+            clearInterval(fetchInterval);
+            fetchInterval = sharedRecordings = null;
+            sharedRecordingGroup.clearLayers();
+        }
+
+        if (!shareSecret) {
+            if (document.body.dataset.centeringMode === 'user')
+                document.body.dataset.centeringMode = null;
+            return;
+        }
+
+        // Function to fetch and draw the latest recording
+        const fetchAndDrawRecording = async () => {
+            try {
+                const response = await fetch(`/latest-recording/${shareSecret}`);
+                if (!response.ok) {
+                    console.error('Failed to fetch recording:', response.statusText);
+                    return;
+                }
+
+                const data = await response.json();
+                if (data.success && data.locations) {
+                    // Format the data to match drawRecordings expected structure
+                    let sharedRecordings = {
+                        [data.recording_id]: data.locations
+                    };
+                    drawRecordings(sharedRecordingGroup, sharedRecordings);
+
+                    lastSharedCoord = lastCoordinate(sharedRecordings);
+                    if (lastSharedCoord && lastSharedCoord.coordinates) {
+                        if (document.body.dataset.centeringMode === 'shared') {
+                            window.map.setView(lastSharedCoord.coordinates, window.map.getZoom(), {
+                                animate: true,
+                                duration: 0.5
+                            });
+                        }
+
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching recording:', error);
+            }
+        };
+
+        document.body.dataset.centeringMode = 'shared';
+
+        // Fetch immediately
+        fetchAndDrawRecording();
+
+        // Then fetch every 30 seconds
+        fetchInterval = setInterval(fetchAndDrawRecording, 30000);
     }
 }
 
 function updateRemoveFilterButtons() {
     // Clear existing buttons
     const filterButtons = document.querySelector('.remove-filter-group');
-    if (!filterButtons) return;
     filterButtons.innerHTML = '';
 
     // Check each filter and create remove buttons for active ones
@@ -254,6 +316,7 @@ function updateRemoveFilterButtons() {
         { key: 'mindistance', label: 'Min Distance', value: getQueryParameter('mindistance') },
         { key: 'starttime', label: 'Start Date', value: getQueryParameter('starttime') },
         { key: 'endtime', label: 'End Date', value: getQueryParameter('endtime') },
+        { key: 'share-secret', label: 'Hide shared trip', value: getQueryParameter('share-secret') },
 
     ].filter(filter => filter.value !== null);
 
@@ -261,7 +324,7 @@ function updateRemoveFilterButtons() {
     activeFilters.forEach(filter => {
         const controlDiv = L.DomUtil.create('div', 'leaflet-bar horizontal-button remove-filter', filterButtons);
         const container = L.DomUtil.create('a', '', controlDiv);
-        container.innerText = filter.key === 'mydirection' ? filter.label : `${filter.label} | ${filter.value}`;
+        container.innerText = ['mydirection', 'share-secret'].includes(filter.key) ? filter.label : `${filter.label}: ${filter.value}`;
         const CLOSE_ICON = '<svg xmlns="http://www.w3.org/2000/svg" width="21" height="18" viewBox="-3 0 24 24" style="vertical-align: middle;"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>';
         container.innerHTML += CLOSE_ICON;
         container.href = 'javascript:;';

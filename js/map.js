@@ -1,13 +1,13 @@
 import {addGeocoder} from './geocoder'
 import {exportAsGPX} from './export-gpx';
 import {$$, bar, bars, arrowLine, C, addAsLeafletControl} from './utils';
-import {clearParams, applyParams, filterMarkerGroup, removeFilterButtons} from './filters';
+import {clearParams, applyParams, sharedRecordingGroup, filterMarkerGroup, removeFilterButtons} from './filters';
 import {restoreView, storageAvailable, summaryText, closestMarker} from './utils';
-import {currentUser, firstUserPromise, userMarkerGroup, createUserMarkers} from './user';
+import {fetchCurrentUser, currentUser, firstUserPromise, userMarkerGroup, createUserMarkers} from './user';
 import {pendingGroup, updatePendingMarkers, addPending} from './pending';
 import {renderReviews} from './render-reviews';
 import {maybeAddNetworkButton} from './network-button';
-import './track-button';
+import {drawRecordings, initializeUserLocationDisplay} from './recordings';
 
 // Register service worker for offline functionality
 if ("serviceWorker" in navigator) {
@@ -80,6 +80,8 @@ var map = L.map(
 );
 window.map = map
 
+initializeUserLocationDisplay(map)
+
 let allCoords = window.markerData.map(m => [m[0], m[1]])
 
 let allMarkers = [];
@@ -136,11 +138,26 @@ for (let row of window.markerData) {
     allMarkers.push(marker)
 }
 
-firstUserPromise.then(_ => createUserMarkers(allMarkers))
+let userRecordingsGroup = L.layerGroup().addTo(map);
+
+firstUserPromise.then(user => {
+    if(!user) return;
+    createUserMarkers();
+    drawRecordings(userRecordingsGroup, user.recordings)
+})
+
+setInterval(async () => {
+    let user = await fetchCurrentUser();
+    if (!user) return;
+    createUserMarkers();
+    window.userRecordings = user.recordings;
+    drawRecordings(userRecordingsGroup, user.recordings);
+}, 60000)
 
 let allMarkerGroup = L.layerGroup(allMarkers)
 allMarkerGroup.addTo(map)
 userMarkerGroup.addTo(map)
+sharedRecordingGroup.addTo(map)
 
 updatePendingMarkers()
 pendingGroup.addTo(map)
@@ -163,14 +180,16 @@ var osmGroup = L.layerGroup([osmLayer]);
 // --- Attach HTML-defined controls to Leaflet ---
 
 // Menu button
-const menuEl = addAsLeafletControl('#menu-control');
-menuEl.querySelector('a').addEventListener('click', e => {
-    L.DomEvent.stopPropagation(e)
-    navigateHome();
-    if (document.body.classList.contains('menu')) bar();
-    else bar('.sidebar.menu');
-    document.body.classList.toggle('menu');
-});
+if (!window.Capacitor) {
+    const menuEl = addAsLeafletControl('#menu-control');
+    menuEl.querySelector('a').addEventListener('click', e => {
+        L.DomEvent.stopPropagation(e)
+        navigateHome();
+        if (document.body.classList.contains('menu')) bar();
+        else bar('.sidebar.menu');
+        document.body.classList.toggle('menu');
+    });
+}
 
 // Add spot button
 const addSpotEl = addAsLeafletControl('#addspot-control');
@@ -213,7 +232,7 @@ function updateAttribution() {
     if (currentTileLayer === 'osm') {
         attrControl.innerHTML = `
             © <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>,
-            <a href="https://hitchmap.com/copyright.html">Hitchmap</a> contributors
+            <a href="https://hitchmap.com/copyright.html">Hitchmap</a>/<a href="https://hitchwiki.org/">wiki</a> contributors
         `;
     } else {
         // For Esri, let it manage its own dynamic attribution and just append Hitchmap if not already there
@@ -270,7 +289,7 @@ addAsLeafletControl('#lang-control');
 // maybeAddNetworkButton();
 
 // GPS and geocoder remain in the same sequence
-L.control.locate().addTo(map);
+// L.control.locate().addTo(map);
 addGeocoder(map);
 
 // Optional layout break
@@ -280,9 +299,9 @@ addAsLeafletControl('#flex-break-3');
 var zoom = $$('.leaflet-control-zoom')
 zoom.parentNode.appendChild(zoom)
 
-addAsLeafletControl('#donate-control', 'bottomright');
+// addAsLeafletControl('#donate-control', 'bottomright');
 
-if (window.Capacitor) addAsLeafletControl('#location-tracking-control', 'bottomright');
+if (window.Capacitor) addAsLeafletControl('#location-tracking-control', 'bottomleft');
 
 $$('#sb-close').onclick = function (e) {
     navigateHome()
@@ -366,6 +385,10 @@ function initializeSpotForm(points, destinationProvided) {
     // nicknames wont be recorded if a user is logged in
     $$("#nickname-container").classList.toggle("make-invisible", !!currentUser);
     $$('#spot-form input[name=coords]').value = `${points[0].lat},${points[0].lng},${points[1].lat},${points[1].lng}`
+    $$('#spot-form textarea[name=comment]').oninput = e => {
+        e.target.style.height = 'auto'; // Reset height
+        e.target.style.height = e.target.scrollHeight + 'px'; // Set new height
+    }
 
     const form = $$("#spot-form");
     form.reset();
@@ -388,6 +411,11 @@ extendedForm.ontoggle = () => localStorage.setItem('details-open', extendedForm.
 // Map click handler for mobile misclicks
 map.on('click', e => {
     var opened = false;
+
+    if (e.originalEvent.target.closest('.leaflet-control-container')) {
+        // Click happened on a control; ignore
+        return;
+    }
 
     if (!document.body.classList.contains('zoomed-out') && window.innerWidth < 780) {
         var layerPoint = map.latLngToLayerPoint(e.latlng)

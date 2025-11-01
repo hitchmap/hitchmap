@@ -11,6 +11,7 @@ from flask_security import current_user
 
 from backend.shared import app, db, root_dir, dist_dir, static_dir, EMAIL, logger
 from backend.user import init_security, security
+import backend.locations
 
 
 @app.route("/", methods=["GET"])

@@ -1,25 +1,27 @@
 import { C } from './utils.js';
 
-export let currentUser;
+export let currentUser, userRecordings;
 export let userMarkerGroup = L.layerGroup();
 
 export async function fetchCurrentUser() {
     let res = await fetch('/user')
-    currentUser = (await res.json()).username
+    let userData = await res.json();
+    currentUser = userData.username ? userData : undefined;
     return currentUser
 }
 
 export let firstUserPromise = fetchCurrentUser();
 
-setTimeout(fetchCurrentUser, 60000)
+firstUserPromise.then(user => {
+    if(window.Capacitor && !user)
+        window.location = '/login';
+})
 
-let userColors = {1: 'darkred', 2: 'darkred', 3: 'darkred', 4: 'green', 5: 'green'};
-
-export function createUserMarkers(markers) {
+export function createUserMarkers() {
     if (!currentUser) return
     userMarkerGroup.clearLayers()
     let userMarkers = window.reviewData.filter(
-        review => review[C.HITCHHIKER] && review[C.HITCHHIKER].toLowerCase() == currentUser.toLowerCase()
+        review => review[C.HITCHHIKER] && review[C.HITCHHIKER].toLowerCase() == currentUser.username.toLowerCase()
     ).map(
         review => review._marker
     )

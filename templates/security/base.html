@@ -105,9 +105,19 @@
       <script>
        document.querySelectorAll('a').forEach(link => {
            if (link.href === window.location.href) {
-               link.style.display = 'none'; // Hide the link
+               link.style.display = 'none'; // Hide links to self
            }
        });
+       document.querySelectorAll('input#remember').forEach(remember => {
+           remember.checked = true; // check remember me
+       });
+       if (window.Capacitor) {
+           let {SplashScreen} = window.Capacitor.Plugins;
+           SplashScreen.hide();
+           window.addEventListener('beforeunload', () => {
+               SplashScreen.show();
+           });
+       }
       </script>
       <script async defer src="https://scripts.simpleanalyticscdn.com/latest.js"></script>
       {%- endblock body %}

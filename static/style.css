@@ -429,11 +429,8 @@ ul.no-style {
     height: 0;
     margin: 0px !important;
 }
-.remove-filter-group {
+.remove-filter-group:empty {
     display: none;
-}
-body.filtering .remove-filter-group {
-    display: block;
 }
 .review-comment {
     white-space: pre-line;
@@ -487,5 +484,8 @@ body.filtering .remove-filter-group {
     color: #999 !important;
 }
 body.tracking #start-tracking, body:not(.tracking) #stop-tracking {
+    display: none;
+}
+body:not(.sharing-location) #unshare-location {
     display: none;
 }

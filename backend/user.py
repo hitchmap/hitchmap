@@ -1,3 +1,6 @@
+import secrets
+import os
+import pandas as pd
 from datetime import datetime
 import pycountry
 from flask import jsonify, redirect, render_template
@@ -54,6 +57,7 @@ class User(db.Model, fsqla.FsUserMixin):
     origin_city = db.Column(db.String(255), default=None)
     hitchwiki_username = db.Column(db.String(255), default=None)
     trustroots_username = db.Column(db.String(255), default=None)
+    location_share_secret = db.Column(db.String(64), default=None, unique=True, index=True)
 
 
 class CountrySelectField(SelectField):
@@ -183,13 +187,72 @@ def form():
 
 @app.route("/user", methods=["GET"])
 def get_user():
-    print(current_user.roles)
     if current_user.is_anonymous:
         return jsonify({"logged_in": False, "_permissions": []})
-    else:
-        permissions = list(set(perm for role in current_user.roles for perm in role.permissions))
 
-        return jsonify({"logged_in": True, "username": current_user.username, "_permissions": permissions})
+    permissions = list(set(perm for role in current_user.roles for perm in role.permissions))
+
+    query = """
+    SELECT * FROM user_locations WHERE user_id = :user_id ORDER BY recording_id, timestamp
+    """
+
+    locations = pd.read_sql(query, con=db.engine, params={"user_id": current_user.id})
+    recordings = {
+        recording_id: group[["latitude", "longitude", "timestamp"]].to_dict("records")
+        for recording_id, group in locations.groupby("recording_id")
+    }
+
+    return jsonify(
+        {
+            "logged_in": True,
+            "username": current_user.username,
+            "_permissions": permissions,
+            "recordings": recordings,
+            "location_share_secret": current_user.location_share_secret,
+        }
+    )
+
+
+@app.route("/share-location", methods=["POST"])
+def share_location():
+    """Start sharing location - generates a secret token"""
+    if current_user.is_anonymous:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    try:
+        current_user.location_share_secret = secrets.token_urlsafe(32)
+        db.session.commit()
+        logger.info(f"User {current_user.username} started sharing location")
+
+        return jsonify({"success": True, "location_share_secret": current_user.location_share_secret}), 200
+    except Exception as e:
+        logger.error(f"Error starting location share: {str(e)}")
+        db.session.rollback()
+        return jsonify({"error": "Failed to start sharing"}), 500
+
+
+@app.route("/unshare-location", methods=["POST"])
+def unshare_location():
+    """Stop sharing location - removes secret token and non-tracking locations"""
+    if current_user.is_anonymous:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    try:
+        # Delete the non-tracking location for this user
+        db.session.execute(
+            text("DELETE FROM user_locations WHERE user_id = :user_id AND tracking = FALSE"), {"user_id": current_user.id}
+        )
+
+        # Clear the share secret
+        current_user.location_share_secret = None
+        db.session.commit()
+
+        logger.info(f"User {current_user.username} stopped sharing location")
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        logger.error(f"Error stopping location share: {str(e)}")
+        db.session.rollback()
+        return jsonify({"error": "Failed to stop sharing"}), 500
 
 
 @app.route("/delete-user", methods=["GET"])
