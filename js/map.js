@@ -4,7 +4,7 @@ import {$$, bar, bars, arrowLine, C, addAsLeafletControl} from './utils';
 import {clearParams, applyParams, sharedRecordingGroup, filterMarkerGroup, removeFilterButtons} from './filters';
 import {restoreView, storageAvailable, summaryText, closestMarker} from './utils';
 import {fetchCurrentUser, currentUser, firstUserPromise, userMarkerGroup, createUserMarkers} from './user';
-import {pendingGroup, updatePendingMarkers, addPending} from './pending';
+import {pendingGroup, updatePendingMarkers, addPending, getFuturePending} from './pending';
 import {renderReviews} from './render-reviews';
 import {maybeAddNetworkButton} from './network-button';
 import {drawRecordings, initializeUserLocationDisplay} from './recordings';
@@ -14,10 +14,10 @@ if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("/sw.js").catch(e => console.error(e));
 }
 
-// Initialize global variables for spot tracking
-var addSpotPoints = [], // Array to store points when adding new spots
+// Exported variables appear on window.hitch
+export var addSpotPoints = [], // Array to store points when adding new spots
     addSpotLine = null, // Line connecting spots
-    active = [], // Currently active/selected markers
+    active = null, // Currently active/selected markers
     destLineGroup = L.layerGroup(), // Group for destination lines
     spotMarker, // Marker for hitchhiking spot
     destMarker // Marker for destination
@@ -35,7 +35,7 @@ function handleMarkerClick(marker, point, e) {
 // Handle navigation to a marker
 var handleMarkerNavigation = function (marker) {
     var row = marker.options._row, point = marker.getLatLng()
-    active = [marker]
+    active = marker
 
     addSpotPoints = []
     renderPoints()
@@ -67,7 +67,7 @@ $$(".sidebar.show-spot").addEventListener("click", function (event) {
     }
 });
 
-var map = L.map(
+export var map = L.map(
     "hitch-map",
     {
         center: [0.0, 0.0],
@@ -81,6 +81,10 @@ var map = L.map(
 window.map = map
 
 initializeUserLocationDisplay(map)
+
+map.on('dragstart', () => {
+    document.body.dataset.centeringMode = null;
+});
 
 let allCoords = window.markerData.map(m => [m[0], m[1]])
 
@@ -113,6 +117,10 @@ showHeatmapOrDefaultPane()
 L.control.scale().addTo(map);
 
 // Create custom map panes for layering
+let backPane = map.createPane('backpane')
+backPane.style.zIndex = 300
+
+// Create custom map panes for layering
 let filterPane = map.createPane('filtering')
 filterPane.style.zIndex = 450
 
@@ -143,7 +151,9 @@ let userRecordingsGroup = L.layerGroup().addTo(map);
 firstUserPromise.then(user => {
     if(!user) return;
     createUserMarkers();
+    window.userRecordings = user.recordings;
     drawRecordings(userRecordingsGroup, user.recordings)
+    document.querySelector('#account-control a').innerText = '👤 ' + user.username;
 })
 
 setInterval(async () => {
@@ -152,6 +162,7 @@ setInterval(async () => {
     createUserMarkers();
     window.userRecordings = user.recordings;
     drawRecordings(userRecordingsGroup, user.recordings);
+    document.querySelector('#account-control a').innerText = '👤 ' + user.username;
 }, 60000)
 
 let allMarkerGroup = L.layerGroup(allMarkers)
@@ -285,6 +296,18 @@ img.addEventListener('click', e => {
     toggleLayer();
 });
 
+const refreshEl = addAsLeafletControl('#refresh-control');
+refreshEl.onclick = async e => {
+    if ('caches' in window) {
+        try {
+            await caches.delete('hitchmap-v1');
+        } catch (error) {
+            console.error('Failed to clear cache:', error);
+        }
+    }
+    location.reload()
+}
+
 addAsLeafletControl('#lang-control');
 // maybeAddNetworkButton();
 
@@ -346,8 +369,8 @@ var addSpotStep = function (e) {
     }
 
     if (action === 'review') {
-        addSpotPoints.push(active[0].getLatLng())
-        active = []
+        addSpotPoints.push(active.getLatLng())
+        active = null
     }
 
     renderPoints()
@@ -444,40 +467,58 @@ updateZoomClasses()
 map.on('zoomstart', _ => document.body.classList.add('zooming')); // Hide the layer while pinch zooming
 map.on('zoomend', _ => document.body.classList.remove('zooming')); // Show the layer
 
+export let haloRing;
+
 function renderPoints() {
-    if (spotMarker) map.removeLayer(spotMarker)
-    if (destMarker) map.removeLayer(destMarker)
+    if (spotMarker) map.removeLayer(spotMarker);
+    if (destMarker) map.removeLayer(destMarker);
+    if (haloRing) map.removeLayer(haloRing);
 
     if (destLineGroup)
-        destLineGroup.clearLayers()
+        destLineGroup.clearLayers();
 
-    spotMarker = destMarker = null
+    spotMarker = destMarker = haloRing = null;
+
     if (addSpotPoints[0]) {
-        spotMarker = L.marker(addSpotPoints[0])
-        spotMarker.addTo(map)
+        spotMarker = L.marker(addSpotPoints[0]);
+        spotMarker.addTo(map);
     }
-    if (addSpotPoints[1] && addSpotPoints[1].lat !== 'nan') {
-        destMarker = L.marker(addSpotPoints[1], { color: 'red' })
-        destMarker.addTo(map)
-    }
-    document.body.classList.toggle('has-points', addSpotPoints.length)
 
-    for (let a of active) {
-        let reviews = a.options._reviews.filter(r => r[C.DEST_LAT] != null)
+    if (addSpotPoints[1] && addSpotPoints[1].lat !== 'nan') {
+        destMarker = L.marker(addSpotPoints[1]);
+        destMarker.addTo(map);
+    }
+
+    document.body.classList.toggle('has-points', addSpotPoints.length);
+
+    if (active) {
+        const latlng = active.getLatLng();
+        const haloOpts = {
+            color: 'red',
+            weight: 2,
+            opacity: 0.55,
+            fillOpacity: 0,
+            interactive: false,
+            pane: 'backpane',
+            radius: 11
+        };
+        haloRing = L.circleMarker(latlng, haloOpts).addTo(map);
+
+        let reviews = active.options._reviews.filter(r => r[C.DEST_LAT] != null);
         for (let review of reviews) {
-            let lat = review[C.DEST_LAT]
-            let lon = review[C.DEST_LON]
-            arrowLine(a.getLatLng(), [lat, lon]).addTo(destLineGroup)
+            let lat = review[C.DEST_LAT];
+            let lon = review[C.DEST_LON];
+            arrowLine(latlng, [lat, lon]).addTo(destLineGroup);
         }
     }
 
-    destLineGroup.addTo(map)
+    destLineGroup.addTo(map);
 }
 
 function clear() {
     bar()
     addSpotPoints = []
-    active = []
+    active = null
     renderPoints()
     updateAddSpotLine()
     document.body.classList.remove('adding-spot', 'menu')
@@ -515,7 +556,7 @@ $$('#spot-form').addEventListener('submit', async function(event) {
 
     if (resp.ok) {
         location.hash = '#success';
-        addPending(pendingLoc.lat, pendingLoc.lng)
+        await addPending(pendingLoc.lat, pendingLoc.lng)
         updatePendingMarkers()
     }
     else {

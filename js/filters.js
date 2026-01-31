@@ -272,7 +272,7 @@ export function applyParams() {
                 const data = await response.json();
                 if (data.success && data.locations) {
                     // Format the data to match drawRecordings expected structure
-                    let sharedRecordings = {
+                    sharedRecordings = {
                         [data.recording_id]: data.locations
                     };
                     drawRecordings(sharedRecordingGroup, sharedRecordings);
@@ -285,7 +285,6 @@ export function applyParams() {
                                 duration: 0.5
                             });
                         }
-
                     }
                 }
             } catch (error) {

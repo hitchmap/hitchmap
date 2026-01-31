@@ -14,33 +14,89 @@ self.addEventListener('install', (event) => {
 // Listen for fetch events
 self.addEventListener('fetch', (event) => {
     if (event.request.method != 'GET') return;
-    
-    // Helper function to strip query parameters from a URL
+
+    event.respondWith(handleFetch(event.request));
+});
+
+async function handleFetch(request) {
+    // Don't cache media files
+    if (['image', 'video', 'audio'].includes(request.destination)) {
+        return fetch(request);
+    }
+
     function stripQuery(url) {
         const urlObject = new URL(url);
         if (urlObject.hostname !== self.location.hostname) return url;
-        urlObject.search = ''; // Remove query parameters
+        urlObject.search = '';
         return urlObject.toString();
     }
 
-    // Open the cache
-    event.respondWith(
-        caches.open(cacheName).then((cache) => {
-            const strippedUrl = stripQuery(event.request.url);
+    const cache = await caches.open(cacheName);
+    const strippedUrl = stripQuery(request.url);
+    const isExternal = new URL(request.url).hostname !== self.location.hostname;
 
-            // Go network-first
-            return fetch(event.request)
-                .then((fetchedResponse) => {
-                    // IMPORTANT: Tell the service worker what not to cache
-                    if (!['image', 'video', 'audio'].includes(event.request.destination)) {
-                        cache.put(strippedUrl, fetchedResponse.clone());
-                    }
+    const isCapacitor = typeof Capacitor !== 'undefined';
+    const isHomepage = strippedUrl === stripQuery(self.location.origin + '/');
+
+    if (isCapacitor && isHomepage) {
+        const cachedResponse = await cache.match(strippedUrl);
+
+        if (cachedResponse) {
+            const dateHeader = cachedResponse.headers.get('Date');
+            const cachedTime = dateHeader ? Date.parse(dateHeader) : null;
+
+            // If Date header is missing or invalid, go network-first
+            if (!cachedTime) {
+                try {
+                    const fetchedResponse = await fetch(request);
+                    await cache.put(strippedUrl, fetchedResponse.clone());
                     return fetchedResponse;
-                })
-                .catch(() => {
-                    // If the network is unavailable, get from cache
-                    return cache.match(strippedUrl);
-                });
-        })
-    );
-});
+                } catch {
+                    return cachedResponse;
+                }
+            }
+
+            const cacheAge = Date.now() - cachedTime;
+            const sixHours = 6 * 60 * 60 * 1000;
+
+            if (cacheAge > sixHours) {
+                try {
+                    const fetchedResponse = await fetch(request);
+                    await cache.put(strippedUrl, fetchedResponse.clone());
+                    return fetchedResponse;
+                } catch {
+                    return cachedResponse;
+                }
+            }
+
+            return cachedResponse;
+        }
+
+        try {
+            const fetchedResponse = await fetch(request);
+            await cache.put(strippedUrl, fetchedResponse.clone());
+            return fetchedResponse;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    if (isExternal) {
+        const cachedResponse = await cache.match(strippedUrl);
+        if (cachedResponse) return cachedResponse;
+
+        const fetchedResponse = await fetch(request);
+        await cache.put(strippedUrl, fetchedResponse.clone());
+        return fetchedResponse;
+    }
+
+    try {
+        const fetchedResponse = await fetch(request);
+        await cache.put(strippedUrl, fetchedResponse.clone());
+        return fetchedResponse;
+    } catch (error) {
+        const cachedResponse = await cache.match(strippedUrl);
+        if (cachedResponse) return cachedResponse;
+        throw error;
+    }
+}

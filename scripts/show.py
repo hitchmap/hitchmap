@@ -93,6 +93,8 @@ print("Currently recorded duplicate spots are represented by:", dups)
 
 points[["lat", "lon"]] = points[["lat", "lon"]].apply(lambda x: replace_map.get(tuple(x), x), axis=1, raw=True)
 
+points[["lat", "lon", "dest_lat", "dest_lon"]] = points[["lat", "lon", "dest_lat", "dest_lon"]].round(7)
+
 points = geopandas.GeoDataFrame(points, geometry=geopandas.points_from_xy(points.lon, points.lat), crs="EPSG:4326")
 
 service_areas = pd.read_sql("select * from service_areas", get_db())
@@ -241,6 +243,8 @@ else:
 groups = points.groupby("cluster_id")
 
 print("After clustering:", len(groups), "Before:", len(points.geometry.drop_duplicates()))
+
+points.loc[~points.comment.isna(), "comment"] = ""
 
 # Create individual review data with all fields needed for rendering
 review_data = points[

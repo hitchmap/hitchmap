@@ -35,6 +35,32 @@ if (window.Capacitor) {
         SplashScreen.show();
     });
 
+    // Compass heading management
+    let compassWatchId = null;
+    let lastCompassHeading = null;
+
+    function startCompassWatch() {
+        if (!navigator.compass || compassWatchId !== null) return;
+
+        compassWatchId = navigator.compass.watchHeading(
+            (heading) => {
+                lastCompassHeading = heading.magneticHeading;
+            },
+            (error) => {
+                console.error('Compass error:', error);
+            },
+            { frequency: 1000 } // Update every second
+        );
+    }
+
+    function stopCompassWatch() {
+        if (!navigator.compass || compassWatchId === null) return;
+
+        navigator.compass.clearWatch(compassWatchId);
+        compassWatchId = null;
+        lastCompassHeading = null;
+    }
+
     async function isServiceRunning() {
         try {
             const status = await BackgroundGeolocation.checkStatus();
@@ -50,7 +76,7 @@ if (window.Capacitor) {
             await BackgroundGeolocation.configure({
                 stationaryRadius: 0,
                 distanceFilter: 0,
-                desiredAccuracy: BackgroundGeolocation.LOW_ACCURACY,
+                desiredAccuracy: BackgroundGeolocation.MEDIUM_ACCURACY,
                 debug: true,
                 notificationsEnabled: true,
                 notificationTitle: "Hitchmap",
@@ -94,6 +120,7 @@ if (window.Capacitor) {
 
         try {
             await BackgroundGeolocation.start();
+            startCompassWatch(); // Start compass when service starts
             console.log('Service started');
         } catch (error) {
             console.error('Error starting:', error);
@@ -106,6 +133,7 @@ if (window.Capacitor) {
             document.body.classList.remove('has-user-location');
             userLocationDisplay.disable();
             lastUserLocation = null;
+            stopCompassWatch(); // Stop compass when service stops
 
             if (document.body.dataset.centeringMode === 'user')
                 document.body.dataset.centeringMode = null;
@@ -196,8 +224,10 @@ if (window.Capacitor) {
 
     BackgroundGeolocation.on('location', async (location) => {
         if (!receivedLocations) {
-            if (await isServiceRunning())
+            if (await isServiceRunning()) {
                 document.body.classList.add('has-user-location');
+                await startCompassWatch();
+            }
 
             if (document.body.dataset.centeringMode !== 'shared') {
                 document.body.dataset.centeringMode = 'user';
@@ -205,8 +235,16 @@ if (window.Capacitor) {
             receivedLocations = true;
         }
         lastUserLocation = location;
+
+        // Use compass heading as fallback if location heading is missing
+        const locationWithHeading = {
+            ...location,
+            heading: location.heading == null ? lastCompassHeading : location.heading
+        };
+        console.log(lastCompassHeading)
+
         userLocationDisplay.enable();
-        userLocationDisplay.updateLocation(location);
+        userLocationDisplay.updateLocation(locationWithHeading);
 
         if (document.body.dataset.centeringMode === 'user') {
             const coords = [location.latitude, location.longitude];

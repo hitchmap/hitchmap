@@ -161,11 +161,11 @@ body.adding-spot .horizontal-button {
     color:#ccc;
 }
 .rate > input:checked ~ label {
-    color: #ffc700;    
+    color: #ffc700;
 }
 .rate:not(:checked) > label:hover,
 .rate:not(:checked) > label:hover ~ label {
-    color: #deb217;  
+    color: #deb217;
 }
 .rate > input:checked + label:hover,
 .rate > input:checked + label:hover ~ label,
@@ -258,8 +258,8 @@ body.adding-spot .leaflet-control-geocoder-form {
     display: inline-block !important;
 }
 
-/* 
-optional section for recording spot data 
+/*
+optional section for recording spot data
 from https://developer.mozilla.org/en-US/docs/Web/HTML/Element/details
 */
 
@@ -460,6 +460,12 @@ ul.no-style {
 
 #lang-control summary a {
     pointer-events: none;
+}
+
+#account-control a {
+    max-width: 100px;
+    overflow-x: hidden;
+    text-overflow: ellipsis;
 }
 
 .small-centered-icon {

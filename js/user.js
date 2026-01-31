@@ -26,6 +26,7 @@ export function createUserMarkers() {
         review => review._marker
     )
     for (let marker of userMarkers) {
+        marker.bringToFront();
         let userDot = new L.circleMarker(marker.getLatLng(), {stroke: false, fill: true, radius: 1, fillColor: 'black', fillOpacity: 1, interactive: false})
         userDot.addTo(userMarkerGroup)
     }

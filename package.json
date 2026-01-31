@@ -5,7 +5,7 @@
     "main": "js/map.js",
     "scripts": {
         "test": "node js/e2e.js",
-        "build": "esbuild js/map.js --bundle --outfile=dist/out.js --external:@capacitor/core",
+        "build": "esbuild js/map.js --global-name=hitch --bundle --outfile=dist/out.js --external:@capacitor/core",
         "cap:sync": "npm run build && npx cap sync",
         "cap:open:ios": "npx cap open ios",
         "cap:open:android": "npx cap open android",

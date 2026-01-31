@@ -27,7 +27,7 @@ export function arrowLine(from, to) {
                         pane: 'arrowlines'
                     },
                 }),
-                offset: 16,
+                offset: 20,
                 endOffset: 0
             }
         ]
