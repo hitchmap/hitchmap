@@ -492,6 +492,9 @@ ul.no-style {
 body.tracking #start-tracking, body:not(.tracking) #stop-tracking {
     display: none;
 }
-body:not(.sharing-location) #unshare-location {
+body.sharing-location #share-location {
+    display: none;
+}
+body:not(.sharing-location) #unshare-location, body:not(.sharing-location) #send-location {
     display: none;
 }

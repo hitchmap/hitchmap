@@ -45,6 +45,7 @@ if (window.Capacitor) {
         compassWatchId = navigator.compass.watchHeading(
             (heading) => {
                 lastCompassHeading = heading.magneticHeading;
+                userLocationDisplay.updateHeading(lastCompassHeading);
             },
             (error) => {
                 console.error('Compass error:', error);
@@ -236,15 +237,10 @@ if (window.Capacitor) {
         }
         lastUserLocation = location;
 
-        // Use compass heading as fallback if location heading is missing
-        const locationWithHeading = {
-            ...location,
-            heading: location.heading == null ? lastCompassHeading : location.heading
-        };
         console.log(lastCompassHeading)
 
         userLocationDisplay.enable();
-        userLocationDisplay.updateLocation(locationWithHeading);
+        userLocationDisplay.updateLocation(location);
 
         if (document.body.dataset.centeringMode === 'user') {
             const coords = [location.latitude, location.longitude];
@@ -262,6 +258,7 @@ if (window.Capacitor) {
     document.getElementById('start-tracking')?.addEventListener('click', startTracking);
     document.getElementById('stop-tracking')?.addEventListener('click', stopTracking);
     document.getElementById('share-location')?.addEventListener('click', startSharing);
+    document.getElementById('send-location')?.addEventListener('click', startSharing);
     document.getElementById('unshare-location')?.addEventListener('click', stopSharing);
 
     firstUserPromise.then(async (user) => {
