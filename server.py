@@ -150,8 +150,7 @@ def serve_static(path):
 
     dist_path = os.path.join(dist_dir, path)
 
-    if os.path.exists(dist_path):
-        return send_from_directory(dist_dir, path)
+    return send_from_directory(dist_dir, path)
 
 
 init_security()
