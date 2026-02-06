@@ -80,7 +80,8 @@ export var map = L.map(
 );
 window.map = map
 
-initializeUserLocationDisplay(map)
+if (window.Capacitor)
+    initializeUserLocationDisplay(map)
 
 map.on('dragstart', () => {
     document.body.dataset.centeringMode = null;

@@ -1,6 +1,6 @@
 import html
 import locale
-import os
+import os, shutil
 import sys
 import base64
 from jinja2 import Environment, FileSystemLoader
@@ -244,8 +244,6 @@ groups = points.groupby("cluster_id")
 
 print("After clustering:", len(groups), "Before:", len(points.geometry.drop_duplicates()))
 
-points.loc[~points.comment.isna(), "comment"] = ""
-
 # Create individual review data with all fields needed for rendering
 review_data = points[
     [
@@ -293,7 +291,6 @@ places["dest_lats"] = points.dropna(subset=["dest_lat", "dest_lon"]).groupby("cl
 places["dest_lons"] = points.dropna(subset=["dest_lat", "dest_lon"]).groupby("cluster_id").dest_lon.apply(list)
 places["lat"] = groups.lat.mean()
 places["lon"] = groups.lon.mean()
-
 
 if LIGHT:
     places = places[(places.text.str.len() > 0) | ~places.ride_distance.isnull()]
@@ -377,8 +374,8 @@ except subprocess.CalledProcessError as e:
 js_output_file = os.path.join(dist_dir_root, "out.js")
 
 # We embed everything directly into the HTML page so our service worker can't serve inconsistent files
-# For example, if we add a new attribute to the spot which is shown in the front-end, but the user only gets the new
-# presentation layer, not the new data, the application would break
+# For example, if we change reviews to include new fields, but the user only gets the new
+# presentation layer expecting the new fields, not the new data, the application would break
 # Because the HTML file contains everything, this is not a problem
 
 with open(js_output_file, encoding="utf-8") as f:
@@ -419,3 +416,14 @@ if not LIGHT and not LANG:
     duplicates[["id", "from_url", "to_url", "distance", "reviewed", "accepted"]].to_html(
         outname_dups, render_links=True, index=False
     )
+
+static_dir = os.path.join(root_dir, "static")
+
+for name in os.listdir(static_dir):
+    src = os.path.join(static_dir, name)
+    dst = os.path.join(dist_dir, name)
+
+    if os.path.isdir(src):
+        shutil.copytree(src, dst, dirs_exist_ok=True)
+    elif not os.path.islink(src):
+        shutil.copy2(src, dst)

@@ -199,26 +199,38 @@ def get_user():
 
     locations = pd.read_sql(query, con=db.engine, params={"user_id": current_user.id})
 
-    last_location_timestamp = locations.timestamp.max().item()
+    if locations.empty:
+        return jsonify(
+            {
+                "logged_in": True,
+                "username": current_user.username,
+                "_permissions": permissions,
+                "recordings": {},
+                "location_share_secret": current_user.location_share_secret,
+                "last_location_timestamp": None,
+            }
+        )
+    else:
+        last_location_timestamp = locations.timestamp.max().item()
 
-    # merge consecutive locations that are close together
-    locations = merge_slow_points_grid_df(locations)
+        # merge consecutive locations that are close together
+        locations = merge_slow_points_grid_df(locations)
 
-    recordings = {
-        recording_id: group[["latitude", "longitude", "timestamp"]].to_dict("records")
-        for recording_id, group in locations.groupby("recording_id")
-    }
-
-    return jsonify(
-        {
-            "logged_in": True,
-            "username": current_user.username,
-            "_permissions": permissions,
-            "recordings": recordings,
-            "location_share_secret": current_user.location_share_secret,
-            "last_location_timestamp": last_location_timestamp,
+        recordings = {
+            recording_id: group[["latitude", "longitude", "timestamp"]].to_dict("records")
+            for recording_id, group in locations.groupby("recording_id")
         }
-    )
+
+        return jsonify(
+            {
+                "logged_in": True,
+                "username": current_user.username,
+                "_permissions": permissions,
+                "recordings": recordings,
+                "location_share_secret": current_user.location_share_secret,
+                "last_location_timestamp": last_location_timestamp,
+            }
+        )
 
 
 @app.route("/share-location", methods=["POST"])

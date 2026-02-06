@@ -19,11 +19,6 @@ def index():
     return send_file(os.path.join(dist_dir, "index.html"))
 
 
-@app.route("/.well-known/assetlinks.json", methods=["GET"])
-def assetlinks():
-    return send_file(os.path.join(root_dir, "android/assetlinks.json"))
-
-
 @app.route("/Hitchmap.apk", methods=["GET"])
 def android_app():
     return send_file("android/Hitchmap.apk")
@@ -157,8 +152,6 @@ def serve_static(path):
 
     if os.path.exists(dist_path):
         return send_from_directory(dist_dir, path)
-    else:
-        return send_from_directory(static_dir, path)
 
 
 init_security()

@@ -307,8 +307,6 @@ if (window.Capacitor) {
 export function drawRecordings(recordingGroup, recordings, lastTimestamp) {
     recordingGroup.clearLayers();
     if (!recordings) return;
-    console.log('TIMESTAMP')
-    console.log(lastTimestamp)
 
     lastRecordingTimestamp = lastTimestamp;
 
@@ -340,7 +338,8 @@ export function drawRecordings(recordingGroup, recordings, lastTimestamp) {
             `).addTo(recordingGroup);
         });
     });
-    drawLocalRecordings();
+    if (window.Capacitor)
+        drawLocalRecordings();
 }
 
 function drawLocalRecordings() {

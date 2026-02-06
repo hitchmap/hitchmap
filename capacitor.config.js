@@ -1,10 +1,13 @@
+const IS_PROD = true
+
 module.exports = {
     appId: 'com.hitchmap.app',
     appName: 'Hitchmap',
     webDir: 'dist',
     server: {
-        url: 'http://192.168.2.4:5000',
-        cleartext: true,
+        url: IS_PROD ? 'https://hitchmap.com' : 'http://192.168.2.4:5000',
+        cleartext: !IS_PROD,
+        errorPath: 'capacitor-error.html'
     },
     ios: {
         contentInset: 'automatic',

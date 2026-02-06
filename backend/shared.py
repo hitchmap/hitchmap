@@ -37,6 +37,7 @@ def get_or_create_secret_key():
     return secret_key
 
 
+print(dist_dir)
 app = Flask(__name__, template_folder=os.path.join(root_dir, "templates"))
 app.config["DEBUG"] = DATABASE == "prod-points.sqlite"
 app.config["SECRET_KEY"] = get_or_create_secret_key()
