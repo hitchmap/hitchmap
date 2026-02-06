@@ -24,10 +24,11 @@ async function handleFetch(request) {
         return fetch(request);
     }
 
+    // Helper function to strip query parameters from a URL
     function stripQuery(url) {
         const urlObject = new URL(url);
         if (urlObject.hostname !== self.location.hostname) return url;
-        urlObject.search = '';
+        urlObject.search = ''; // Remove query parameters
         return urlObject.toString();
     }
 
@@ -35,43 +36,48 @@ async function handleFetch(request) {
     const strippedUrl = stripQuery(request.url);
     const isExternal = new URL(request.url).hostname !== self.location.hostname;
 
+    // Check if Capacitor is defined and if this is the homepage
     const isCapacitor = typeof Capacitor !== 'undefined';
     const isHomepage = strippedUrl === stripQuery(self.location.origin + '/');
 
+    // Special handling for homepage in Capacitor
     if (isCapacitor && isHomepage) {
         const cachedResponse = await cache.match(strippedUrl);
 
         if (cachedResponse) {
-            const dateHeader = cachedResponse.headers.get('Date');
-            const cachedTime = dateHeader ? Date.parse(dateHeader) : null;
+            const responseTime = cachedResponse.headers.get('sw-response-time');
 
-            // If Date header is missing or invalid, go network-first
-            if (!cachedTime) {
+            // If no sw-response-time header, go network-first
+            if (!responseTime) {
                 try {
                     const fetchedResponse = await fetch(request);
                     await cache.put(strippedUrl, fetchedResponse.clone());
                     return fetchedResponse;
-                } catch {
+                } catch (error) {
                     return cachedResponse;
                 }
             }
 
-            const cacheAge = Date.now() - cachedTime;
+            // Check if cached response is older than 6 hours
+            const cacheAge = Date.now() - parseInt(responseTime);
             const sixHours = 6 * 60 * 60 * 1000;
 
             if (cacheAge > sixHours) {
+                // Cached response is stale, fetch fresh
                 try {
                     const fetchedResponse = await fetch(request);
                     await cache.put(strippedUrl, fetchedResponse.clone());
                     return fetchedResponse;
-                } catch {
+                } catch (error) {
                     return cachedResponse;
                 }
             }
 
+            // Cache is fresh, return it
             return cachedResponse;
         }
 
+        // No cache, fetch from network
         try {
             const fetchedResponse = await fetch(request);
             await cache.put(strippedUrl, fetchedResponse.clone());
@@ -82,21 +88,32 @@ async function handleFetch(request) {
     }
 
     if (isExternal) {
+        // Cache-first for external domains
         const cachedResponse = await cache.match(strippedUrl);
-        if (cachedResponse) return cachedResponse;
 
+        if (cachedResponse) {
+            return cachedResponse;
+        }
+
+        // If not in cache, fetch from network
         const fetchedResponse = await fetch(request);
         await cache.put(strippedUrl, fetchedResponse.clone());
-        return fetchedResponse;
-    }
 
-    try {
-        const fetchedResponse = await fetch(request);
-        await cache.put(strippedUrl, fetchedResponse.clone());
         return fetchedResponse;
-    } catch (error) {
-        const cachedResponse = await cache.match(strippedUrl);
-        if (cachedResponse) return cachedResponse;
-        throw error;
+    } else {
+        // Network-first for same-origin requests
+        try {
+            const fetchedResponse = await fetch(request);
+            await cache.put(strippedUrl, fetchedResponse.clone());
+
+            return fetchedResponse;
+        } catch (error) {
+            // If the network is unavailable, get from cache
+            const cachedResponse = await cache.match(strippedUrl);
+            if (cachedResponse) {
+                return cachedResponse;
+            }
+            throw error;
+        }
     }
 }

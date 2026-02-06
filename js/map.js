@@ -152,7 +152,7 @@ firstUserPromise.then(user => {
     if(!user) return;
     createUserMarkers();
     window.userRecordings = user.recordings;
-    drawRecordings(userRecordingsGroup, user.recordings)
+    drawRecordings(userRecordingsGroup, user.recordings, user.last_location_timestamp)
     document.querySelector('#account-control a').innerText = '👤 ' + user.username;
 })
 
@@ -161,7 +161,7 @@ setInterval(async () => {
     if (!user) return;
     createUserMarkers();
     window.userRecordings = user.recordings;
-    drawRecordings(userRecordingsGroup, user.recordings);
+    drawRecordings(userRecordingsGroup, user.recordings, user.last_location_timestamp);
     document.querySelector('#account-control a').innerText = '👤 ' + user.username;
 }, 60000)
 
@@ -297,7 +297,10 @@ img.addEventListener('click', e => {
 });
 
 const refreshEl = addAsLeafletControl('#refresh-control');
-refreshEl.onclick = async e => {
+
+const refreshPending = document.querySelector('#refresh-pending');
+
+refreshEl.onclick = refreshPending.onclick = async e => {
     if ('caches' in window) {
         try {
             await caches.delete('hitchmap-v1');

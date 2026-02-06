@@ -175,27 +175,23 @@ class UserLocationDisplay {
         this._latlng = [location.latitude, location.longitude];
         const accuracy = location.accuracy || 0;
 
+        if (this._marker) this._marker.removeFrom(this._layer);
+        if (this._circle) this._circle.removeFrom(this._layer);
+
         // Draw accuracy circle
         if (this.options.drawCircle) {
-            if (!this._circle) {
-                this._circle = circle(this._latlng, accuracy, this.options.circleStyle).addTo(this._layer);
-            } else {
-                this._circle.setLatLng(this._latlng).setRadius(accuracy);
-            }
+            this._circle = circle(this._latlng, accuracy, this.options.circleStyle).addTo(this._layer);
         }
 
         // Draw position marker
         if (this.options.drawMarker) {
-            if (!this._marker) {
-                this._marker = new LocationMarker(this._latlng, this.options.markerStyle).addTo(this._layer);
-            } else {
-                this._marker.setLatLng(this._latlng);
-            }
+            this._marker = new LocationMarker(this._latlng, this.options.markerStyle).addTo(this._layer);
         }
 
         // Move compass to new position if it already exists
         if (this._compass) {
-            this._compass.setLatLng(this._latlng);
+            this._compass.removeFrom(this._layer);
+            this._compass = new CompassMarker(this._latlng, this._compass.heading, this.options.compassStyle).addTo(this._layer);
         }
     }
 

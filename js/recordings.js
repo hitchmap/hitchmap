@@ -3,18 +3,21 @@ import { UserLocationDisplay } from './user-location-display';
 
 let isTracking = false;
 let shareSecret;
-let recordingId = generateRecordingId();
+let recordingId;
 let receivedLocations = false;
+export let localLocationsList = [];
 
-export let lastUserLocation;
 let userLocationDisplay;
+let lastRecordingTimestamp;
+let localRecordingGroup;
 
 export async function initializeUserLocationDisplay(map) {
-    userLocationDisplay = new UserLocationDisplay(map, {
+    userLocationDisplay = window.hitchmapTracker.uld = new UserLocationDisplay(map, {
         drawCircle: true,    // Show accuracy circle
         drawMarker: true,    // Show position marker
         showCompass: true    // Show bearing arrow
     });
+    localRecordingGroup = L.layerGroup().addTo(map);
 }
 
 function generateRecordingId() {
@@ -74,6 +77,15 @@ if (window.Capacitor) {
 
     async function configure() {
         try {
+            // don't change the recording ID if the service is already running!
+            if (await isServiceRunning()) {
+                let oldConfig = await BackgroundGeolocation.getConfig()
+                recordingId = oldConfig.postTemplate.recording_id
+            }
+
+            if (!recordingId)
+                recordingId = generateRecordingId()
+
             await BackgroundGeolocation.configure({
                 stationaryRadius: 0,
                 distanceFilter: 0,
@@ -116,12 +128,11 @@ if (window.Capacitor) {
 
     async function startService() {
         await configure();
-        if (await isServiceRunning()) return;
-        receivedLocations = false;
-
+        startCompassWatch(); // Start compass when service starts
+        if (!await isServiceRunning())
+            receivedLocations = false;
         try {
             await BackgroundGeolocation.start();
-            startCompassWatch(); // Start compass when service starts
             console.log('Service started');
         } catch (error) {
             console.error('Error starting:', error);
@@ -133,7 +144,6 @@ if (window.Capacitor) {
         try {
             document.body.classList.remove('has-user-location');
             userLocationDisplay.disable();
-            lastUserLocation = null;
             stopCompassWatch(); // Stop compass when service stops
 
             if (document.body.dataset.centeringMode === 'user')
@@ -141,6 +151,8 @@ if (window.Capacitor) {
 
             await BackgroundGeolocation.stop();
             recordingId = generateRecordingId();
+            // reset recording ID
+            configure();
             console.log('Service stopped');
         } catch (error) {
             console.error('Error stopping:', error);
@@ -235,7 +247,8 @@ if (window.Capacitor) {
             }
             receivedLocations = true;
         }
-        lastUserLocation = location;
+        localLocationsList.push(location);
+        drawLocalRecordings();
 
         console.log(lastCompassHeading)
 
@@ -266,7 +279,7 @@ if (window.Capacitor) {
         isTracking = isRunning && (await BackgroundGeolocation.getConfig()).postTemplate.tracking === true
         shareSecret = shareSecret || user.location_share_secret;
 
-        if (shareSecret) {
+        if (shareSecret || isTracking) {
             await startService();
         }
 
@@ -285,55 +298,76 @@ if (window.Capacitor) {
         isTracking: () => isTracking,
         shareSecret: () => shareSecret,
         recordingId: () => recordingId,
-        isServiceRunning
+        isServiceRunning,
+        localLocationsList
     };
 }
 
 
-export function drawRecordings(recordingGroup, recordings) {
+export function drawRecordings(recordingGroup, recordings, lastTimestamp) {
     recordingGroup.clearLayers();
-
     if (!recordings) return;
+    console.log('TIMESTAMP')
+    console.log(lastTimestamp)
 
-    // Iterate through each recording
-    Object.entries(recordings).forEach(([recordingId, locations]) => {
+    lastRecordingTimestamp = lastTimestamp;
+
+    // Pass 1: polylines and server-recording dots
+    Object.entries(recordings).forEach(([thisRecordingId, locations]) => {
         if (!locations || locations.length === 0) return;
-
-        // Extract coordinates for the polyline
         const latLngs = locations.map(loc => [loc.latitude, loc.longitude]);
 
-        // Create polyline for the recording
-        const polyline = L.polyline(latLngs, {
+        L.polyline(latLngs, {
             color: '#3388ff',
             weight: 3,
-            opacity: 0.7
-        });
-        polyline.addTo(recordingGroup);
+            opacity: recordingId === thisRecordingId ? 0.4 : 0.2
+        }).addTo(recordingGroup);
 
-        // Add dots on each vertex
-        latLngs.forEach((latLng, index) => {
-            const dot = L.circleMarker(latLng, {
+        locations.forEach((loc, index) => {
+            L.circleMarker(latLngs[index], {
                 radius: 3,
                 fillColor: '#3388ff',
-                fillOpacity: 1,
+                opacity: recordingId === thisRecordingId ? 0.6 : 0.2,
                 color: 'white',
                 weight: 1,
                 interactive: true
-            });
-
-            // Optional: Add popup with timestamp and position info
-            const timestamp = locations[index].timestamp;
-            dot.bindPopup(`
-                <b>Recording ${recordingId}</b><br>
+            }).bindPopup(`
+                <b>Recording ${thisRecordingId}</b><br>
                 Point ${index + 1} of ${locations.length}<br>
-                Time: ${new Date(timestamp).toLocaleString()}<br>
-                Lat: ${latLng[0].toFixed(6)}<br>
-                Lng: ${latLng[1].toFixed(6)}
-            `);
-
-            dot.addTo(recordingGroup);
+                Time: ${loc.timestamp ? new Date(loc.timestamp).toLocaleString() : 'N/A'}<br>
+                Lat: ${loc.latitude.toFixed(6)}<br>
+                Lng: ${loc.longitude.toFixed(6)}
+            `).addTo(recordingGroup);
         });
     });
+    drawLocalRecordings();
+}
+
+function drawLocalRecordings() {
+    localRecordingGroup.clearLayers();
+
+    // Pass 2: local dots drawn last, on top
+    if (!lastRecordingTimestamp) return;
+    localLocationsList
+        .filter(loc => loc.time > lastRecordingTimestamp)
+        .forEach((loc) => {
+            console.log('GOT LOC')
+            console.log(loc)
+            L.circleMarker([loc.latitude, loc.longitude], {
+                radius: 5,
+                fillColor: 'black',
+                fillOpacity: 0.5,
+                color: 'white',
+                weight: 2,
+                interactive: true
+            }).bindPopup(`
+                <b>Recording ${loc.recording_id}</b><br>
+                <i>Local (not yet synced)</i><br>
+                Time: ${loc.time ? new Date(loc.time).toLocaleString() : 'N/A'}<br>
+                Lat: ${loc.latitude.toFixed(6)}<br>
+                Lng: ${loc.longitude.toFixed(6)}
+            `).addTo(localRecordingGroup);
+        });
 }
 
 export function lastCoordinate(recordings) {

@@ -12,6 +12,7 @@ from wtforms import IntegerField, SelectField, StringField, SubmitField, Boolean
 from wtforms.validators import Optional
 from wtforms.widgets import NumberInput
 from sqlalchemy import text
+from backend.simplify_recording import merge_slow_points_grid_df
 
 from wtforms import EmailField, ValidationError
 from flask_security import ForgotPasswordForm
@@ -197,6 +198,12 @@ def get_user():
     """
 
     locations = pd.read_sql(query, con=db.engine, params={"user_id": current_user.id})
+
+    last_location_timestamp = locations.timestamp.max().item()
+
+    # merge consecutive locations that are close together
+    locations = merge_slow_points_grid_df(locations)
+
     recordings = {
         recording_id: group[["latitude", "longitude", "timestamp"]].to_dict("records")
         for recording_id, group in locations.groupby("recording_id")
@@ -209,6 +216,7 @@ def get_user():
             "_permissions": permissions,
             "recordings": recordings,
             "location_share_secret": current_user.location_share_secret,
+            "last_location_timestamp": last_location_timestamp,
         }
     )
 
