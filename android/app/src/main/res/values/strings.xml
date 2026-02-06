@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Hitchmap</string>
+    <string name="title_activity_main">Hitchmap</string>
+    <string name="package_name">com.hitchmap.app</string>
+    <string name="custom_url_scheme">com.hitchmap.app</string>
+    <string name="plugin_bgloc_account_name">$ACCOUNT_NAME</string>
+  <string name="plugin_bgloc_account_type">$ACCOUNT_TYPE</string>
+  <string name="plugin_bgloc_content_authority">$CONTENT_AUTHORITY</string>
+</resources>
