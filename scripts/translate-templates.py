@@ -70,7 +70,6 @@ Template to translate:"""
         model=MODEL,
         messages=[
             {"role": "user", "content": prompt + "\n\n```jinja2\n" + template_content + "\n```"},
-            {"role": "assistant", "content": "```jinja2\n"},
         ],
         temperature=temp,
         max_tokens=len(template_content) * 2,
@@ -79,9 +78,10 @@ Template to translate:"""
     translation = response.choices[0].message.content.strip()
 
     # Extract text from code block
-    file_match = re.search(r"(.*)```", translation, re.DOTALL)
+    file_match = re.search(r"```jinja2(.*)```", translation, re.DOTALL)
     if not file_match:
         logging.warning(f"NO TRANSLATION MATCH for {filename}")
+        print(translation)
         if temp < 1:
             return await translate_template(filename, template_content, target_lang, temp=temp + 0.3)
         else:
@@ -256,7 +256,7 @@ for target_lang_code, target_lang_name in TARGET_LANGUAGES.items():
                 # Save to database with original content
                 translation_date = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f")
                 cursor.execute(
-                    """INSERT OR REPLACE INTO template_translations 
+                    """INSERT OR REPLACE INTO template_translations
                         (filename, language, original_content, translated_content, translation_date, is_original)
                         VALUES (?, ?, ?, ?, ?, 0)""",
                     (filename, target_lang_code, original_content, translated_content, translation_date),
