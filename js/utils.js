@@ -91,6 +91,52 @@ export function closestMarker(markers, lat, lon) {
         return markers.sort((a, b) => a.getLatLng().distanceTo(latlng) - b.getLatLng().distanceTo(latlng))[0]
 }
 
+export function findClosestPolyline(point, polylines) {
+  let minDistSq = Infinity;
+  let closestPolyline = null;
+  let closestPoint = null;
+
+  polylines.forEach(polyline => {
+    let latlngs = polyline.getLatLngs();
+
+    // Flatten MultiPolyline if needed
+    if (Array.isArray(latlngs[0][0])) {
+      latlngs = latlngs.flat();
+    }
+
+    for (let i = 0; i < latlngs.length - 1; i++) {
+      const a = latlngs[i];
+      const b = latlngs[i + 1];
+
+      const dx = b.lng - a.lng;
+      const dy = b.lat - a.lat;
+      const lenSq = dx * dx + dy * dy;
+
+      let t = 0;
+      if (lenSq !== 0) {
+        t = ((point.lng - a.lng) * dx + (point.lat - a.lat) * dy) / lenSq;
+        t = Math.max(0, Math.min(1, t));
+      }
+
+      const cx = a.lng + t * dx;
+      const cy = a.lat + t * dy;
+
+      const distSq = (point.lng - cx) ** 2 + (point.lat - cy) ** 2;
+
+      if (distSq < minDistSq) {
+        minDistSq = distSq;
+        closestPolyline = polyline;
+        closestPoint = L.latLng(cy, cx);
+      }
+    }
+  });
+
+  return {
+    polyline: closestPolyline,
+    point: closestPoint,
+  };
+}
+
 export function markerReviews(marker) {
     const reviewIndices = marker.options._row[6]
     return reviewIndices.map(i => window.reviewData[i])

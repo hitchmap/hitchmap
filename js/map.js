@@ -2,7 +2,7 @@ import {addGeocoder} from './geocoder'
 import {exportAsGPX} from './export-gpx';
 import {$$, bar, bars, arrowLine, C, addAsLeafletControl} from './utils';
 import {clearParams, applyParams, sharedRecordingGroup, filterMarkerGroup, removeFilterButtons} from './filters';
-import {restoreView, storageAvailable, summaryText, closestMarker} from './utils';
+import {restoreView, storageAvailable, summaryText, closestMarker, findClosestPolyline} from './utils';
 import {fetchCurrentUser, currentUser, firstUserPromise, userMarkerGroup, createUserMarkers} from './user';
 import {pendingGroup, updatePendingMarkers, addPending, getFuturePending} from './pending';
 import {renderReviews} from './render-reviews';
@@ -121,9 +121,11 @@ L.control.scale().addTo(map);
 let backPane = map.createPane('backpane')
 backPane.style.zIndex = 300
 
-// Create custom map panes for layering
 let filterPane = map.createPane('filtering')
 filterPane.style.zIndex = 450
+
+let locationPane = map.createPane('user-recordings')
+locationPane.style.zIndex = 350
 
 let arrowlinePane = map.createPane('arrowlines')
 filterPane.style.zIndex = 1450
@@ -147,7 +149,7 @@ for (let row of window.markerData) {
     allMarkers.push(marker)
 }
 
-let userRecordingsGroup = L.layerGroup().addTo(map);
+let userRecordingsGroup = L.layerGroup([], {hitchmapBackground: true}).addTo(map);
 
 firstUserPromise.then(user => {
     if(!user) return;
@@ -444,13 +446,22 @@ map.on('click', e => {
         return;
     }
 
-    if (!document.body.classList.contains('zoomed-out') && window.innerWidth < 780) {
+    const isModernTap = e.originalEvent.pointerType === 'touch';
+
+    if (!document.body.classList.contains('zoomed-out') && (isModernTap || window.innerWidth < 780)) {
         var layerPoint = map.latLngToLayerPoint(e.latlng)
         let markers = document.body.classList.contains('filtering') ? filterMarkerGroup.getLayers() : allMarkers
         var closest = closestMarker(markers, e.latlng.lat, e.latlng.lng)
         if (closest && map.latLngToLayerPoint(closest.getLatLng()).distanceTo(layerPoint) < 20) {
             opened = true
             closest.fire('click', e)
+        } else {
+            let userPolylines = userRecordingsGroup.getLayers().filter(e => e.getLatLngs)
+            let res = findClosestPolyline(e.latlng, userPolylines)
+            if (map.latLngToLayerPoint(res.point).distanceTo(layerPoint) < 20) {
+                opened = true
+                res.polyline.fire('click', e)
+            }
         }
     }
     if (!opened && $$('.sidebar.visible') && !$$('.sidebar.spot-form-container.visible')) {

@@ -41,7 +41,7 @@ TARGET_LANGUAGES = {
 
 MODEL = "deepseek-ai/DeepSeek-V3.2-Exp"
 MAX_CONCURRENT = 200
-LIMIT = os.getenv("TRANSLATE_LIMIT", 0)
+LIMIT = os.getenv("TRANSLATE_LIMIT", 5)
 
 
 @retry(
@@ -52,12 +52,12 @@ LIMIT = os.getenv("TRANSLATE_LIMIT", 0)
 )
 async def get_translation(point_id: int, comment: str, rating: int, target_lang: str, temp=0.3) -> str:
     """Get translation from API with retry logic."""
-    prompt = f"""Hitchmap is a website where hitchhikers share experiences on hitchhiking from spots around the world. Translate the following Hitchmap review (rating: {rating}/5) of a hitchhiking location to {target_lang}, with no other output:"""
+    prompt = f"""Hitchmap is a website where hitchhikers share hitchhiking experiences from particular spots around the world. Translate the following Hitchmap review (rating: {rating}/5) of a hitchhiking location to {target_lang}, with no other output:"""
 
     response = await client.chat.completions.create(
-        model=MODEL,
+        model="deepseek-ai/DeepSeek-V3.2",
         messages=[
-            {"role": "user", "content": prompt + "\n\n```txt\n" + comment + "\n```"},
+            {"role": "user", "content": "Translate this to German:\n\n```txt\nMy name is John.\n```"},
             {"role": "assistant", "content": f"```txt\n"},
         ],
         temperature=temp,
@@ -99,12 +99,13 @@ db_conn.commit()
 
 # Load points from database
 points = pd.read_sql(
-    f"""SELECT id, comment, rating 
-        FROM points 
-        WHERE comment IS NOT NULL 
-        AND comment != '' 
-        AND not banned 
+    f"""SELECT id, comment, rating
+        FROM points
+        WHERE comment IS NOT NULL
+        AND comment != ''
+        AND not banned
         AND revised_by IS NULL
+        AND NOT EXISTS (select * from comment_translations where point_id = points.id)
         LIMIT {LIMIT}
     """,
     db_conn,
@@ -130,7 +131,7 @@ for idx, point in points.iterrows():
 
         translation_date = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f")
         cursor.execute(
-            """INSERT OR REPLACE INTO comment_translations 
+            """INSERT OR REPLACE INTO comment_translations
                 (point_id, language, translated_comment, translation_date, is_original)
                 VALUES (?, ?, ?, ?, 1)""",
             (point_id, detected_lang, comment, translation_date),
@@ -196,7 +197,7 @@ for target_lang_code, target_lang_name in TARGET_LANGUAGES.items():
 print("\n=== Generating HTML report ===")
 
 translations = pd.read_sql(
-    """SELECT 
+    """SELECT
         t.point_id,
         p.country,
         p.rating,

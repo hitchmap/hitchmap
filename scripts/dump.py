@@ -75,6 +75,10 @@ road_islands.to_sql("road_islands", sqlite3.connect(DATABASE_DUMP), index=False,
 conn = sqlite3.connect(DATABASE)
 cursor = conn.cursor()
 
+copy_table_schema("user_locations")
+copy_table_schema("comment_translations")
+copy_table_schema("template_translations")
+
 ### Dump user table ###
 
 copy_table_schema("user")
@@ -83,8 +87,10 @@ user_df = pd.read_sql("select * from user", conn)
 cursor.execute("PRAGMA table_info(user)")
 schema = cursor.fetchall()
 
+
 def generate_random_string(length=10):
     return "".join(random.choices(string.ascii_letters + string.digits, k=length))
+
 
 # Identify columns
 id_col = "id"
@@ -120,7 +126,7 @@ for _, row in user_df.iterrows():
             "origin_country",
             "origin_city",
             "hitchwiki_username",
-            "trustroots_username"
+            "trustroots_username",
         ]:
             new_row[user_info_col] = row[user_info_col]
     new_rows.append(pd.Series(new_row))
@@ -140,7 +146,7 @@ dfs = {
     "service_areas.csv": service_areas,
     "points.csv": all_points,
     "duplicates.csv": duplicates,
-    "user.csv": users_df
+    "user.csv": users_df,
 }
 
 # Writing to a ZIP file

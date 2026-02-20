@@ -257,6 +257,9 @@ a:hover {
 body.adding-spot .leaflet-control-geocoder-form {
     display: inline-block !important;
 }
+body.adding-spot #tile-control {
+    display: block;
+}
 
 /*
 optional section for recording spot data
@@ -496,5 +499,8 @@ body.sharing-location #share-location {
     display: none;
 }
 body:not(.sharing-location) #unshare-location, body:not(.sharing-location) #send-location {
+    display: none;
+}
+#tracking-message {
     display: none;
 }

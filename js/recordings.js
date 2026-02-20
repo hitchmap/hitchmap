@@ -308,27 +308,35 @@ export function drawRecordings(recordingGroup, recordings, lastTimestamp) {
     recordingGroup.clearLayers();
     if (!recordings) return;
 
-    lastRecordingTimestamp = lastTimestamp;
+    if (window.Capacitor)
+        drawLocalRecordings();
 
-    // Pass 1: polylines and server-recording dots
+    // keep recording timestamp stored for calls of drawLocalRecordings
+    if (lastTimestamp)
+        lastRecordingTimestamp = lastTimestamp;
+
+    const hitchmapBackground = recordingGroup.options.hitchmapBackground;
+
     Object.entries(recordings).forEach(([thisRecordingId, locations]) => {
         if (!locations || locations.length === 0) return;
         const latLngs = locations.map(loc => [loc.latitude, loc.longitude]);
 
-        L.polyline(latLngs, {
+        let pl = L.polyline(latLngs, {
             color: '#3388ff',
             weight: 3,
-            opacity: recordingId === thisRecordingId ? 0.4 : 0.2
-        }).addTo(recordingGroup);
+            opacity: recordingId === thisRecordingId ? 0.4 : 0.2,
+        }).bindPopup(`
+                <b>Recording ${thisRecordingId}</b><br>
+            `).addTo(recordingGroup);
 
         locations.forEach((loc, index) => {
-            L.circleMarker(latLngs[index], {
+            let cm = L.circleMarker(latLngs[index], {
                 radius: 3,
                 fillColor: '#3388ff',
                 opacity: recordingId === thisRecordingId ? 0.6 : 0.2,
                 color: 'white',
                 weight: 1,
-                interactive: true
+                interactive: true,
             }).bindPopup(`
                 <b>Recording ${thisRecordingId}</b><br>
                 Point ${index + 1} of ${locations.length}<br>
@@ -336,16 +344,19 @@ export function drawRecordings(recordingGroup, recordings, lastTimestamp) {
                 Lat: ${loc.latitude.toFixed(6)}<br>
                 Lng: ${loc.longitude.toFixed(6)}
             `).addTo(recordingGroup);
+
+            if (hitchmapBackground)
+                cm.bringToBack();
         });
+
+        if (hitchmapBackground)
+            pl.bringToBack();
     });
-    if (window.Capacitor)
-        drawLocalRecordings();
 }
 
 function drawLocalRecordings() {
     localRecordingGroup.clearLayers();
 
-    // Pass 2: local dots drawn last, on top
     if (!lastRecordingTimestamp) return;
     localLocationsList
         .filter(loc => loc.time > lastRecordingTimestamp)
