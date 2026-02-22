@@ -1,5 +1,5 @@
 const localStorageKey = "pending_markers_v1";
-import {$$} from './utils';
+import {$$, clearCacheExceptErrorPage} from './utils';
 
 export const pendingGroup = new L.layerGroup()
 
@@ -19,14 +19,7 @@ export async function addPending(lat, lon) {
     // Save back to localStorage
     localStorage.setItem(localStorageKey, JSON.stringify(pending));
 
-    if ('caches' in window) {
-        try {
-            await caches.delete('hitchmap-v1');
-            console.log('Cache cleared after adding pending marker');
-        } catch (error) {
-            console.error('Failed to clear cache:', error);
-        }
-    }
+    await clearCacheExceptErrorPage();
 }
 
 export function getFuturePending() {

@@ -1,6 +1,6 @@
 import {addGeocoder} from './geocoder'
 import {exportAsGPX} from './export-gpx';
-import {$$, bar, bars, arrowLine, C, addAsLeafletControl} from './utils';
+import {$$, bar, bars, arrowLine, C, addAsLeafletControl, clearCacheExceptErrorPage} from './utils';
 import {clearParams, applyParams, sharedRecordingGroup, filterMarkerGroup, removeFilterButtons} from './filters';
 import {restoreView, storageAvailable, summaryText, closestMarker, findClosestPolyline} from './utils';
 import {fetchCurrentUser, currentUser, firstUserPromise, userMarkerGroup, createUserMarkers} from './user';
@@ -304,13 +304,7 @@ const refreshEl = addAsLeafletControl('#refresh-control');
 const refreshPending = document.querySelector('#refresh-pending');
 
 refreshEl.onclick = refreshPending.onclick = async e => {
-    if ('caches' in window) {
-        try {
-            await caches.delete('hitchmap-v1');
-        } catch (error) {
-            console.error('Failed to clear cache:', error);
-        }
-    }
+    await clearCacheExceptErrorPage();
     location.reload()
 }
 

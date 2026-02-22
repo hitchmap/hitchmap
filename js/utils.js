@@ -173,5 +173,20 @@ export function addAsLeafletControl(selector, position = 'topleft') {
 }
 ;
 
+export async function clearCacheExceptErrorPage() {
+    if (!('caches' in window)) return;
+    try {
+        const cache = await caches.open('hitchmap-v1');
+        const keys = await cache.keys();
+        await Promise.all(
+            keys
+                .filter(req => !req.url.endsWith('/error.html'))
+                .map(req => cache.delete(req))
+        );
+    } catch (error) {
+        console.error('Failed to clear cache:', error);
+    }
+}
+
 // Also export the full object
 export const C = columnExports;
