@@ -55,7 +55,7 @@ outname_recent = os.path.join(dist_dir, "recent.html")
 outname_dups = os.path.join(dist_dir, "recent-dups.html")
 
 # keep right before reading the points
-generation_date = pd.Timestamp.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f")
+generation_date = pd.Timestamp.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
 
 points = pd.read_sql(
