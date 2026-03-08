@@ -6,9 +6,15 @@ const precacheResources = ['/', '/favicon.ico', 'https://tile.openstreetmap.org/
 // When the service worker is installing, open the cache and add the precache resources to it
 self.addEventListener('install', (event) => {
     event.waitUntil(
-        caches.open(cacheName)
-            .then((cache) => cache.addAll(precacheResources))
-            .catch((err) => console.warn('Precache failed:', err))
+        caches.open(cacheName).then((cache) =>
+            Promise.allSettled(
+                precacheResources.map((resource) =>
+                    cache.add(resource).catch((err) =>
+                        console.warn(`Precache failed for ${resource}:`, err)
+                    )
+                )
+            )
+        )
     );
 });
 

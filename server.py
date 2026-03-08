@@ -62,13 +62,14 @@ def experience():
     for _i in range(10):
         resp = requests.get(
             "https://nominatim.openstreetmap.org/reverse",
-            {
+            params={
                 "lat": lat,
                 "lon": lon,
                 "format": "json",
                 "zoom": 3,
                 "email": EMAIL,
             },
+            headers={"User-Agent": "Hitchmap/1.0"},
         )
         if resp.ok:
             break

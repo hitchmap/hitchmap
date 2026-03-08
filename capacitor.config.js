@@ -6,7 +6,8 @@ module.exports = {
     webDir: 'dist',
     server: {
         url: IS_PROD ? 'https://hitchmap.com' : 'http://192.168.2.4:5000',
-        cleartext: !IS_PROD
+        cleartext: !IS_PROD,
+        errorPath: 'error.html'
     },
     ios: {
         contentInset: 'automatic',
