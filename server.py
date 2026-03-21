@@ -157,4 +157,26 @@ def serve_static(path):
 init_security()
 
 if __name__ == "__main__":
+    import subprocess
+    import threading
+    from watchdog.observers import Observer
+    from watchdog.events import FileSystemEventHandler
+
+    class FolderChangeHandler(FileSystemEventHandler):
+        def on_modified(self, event):
+            if not any(p in event.src_path for p in ["scripts/", "js/", "templates/", "static/"]):
+                return
+            print(f"Change detected: {event.src_path}")
+            subprocess.run(["python", "scripts/show.py"])
+
+    def start_watcher():
+        observer = Observer()
+        observer.schedule(FolderChangeHandler(), path=".", recursive=True)
+        observer.start()
+        print("observer started")
+        observer.join()
+
+    if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+        watcher_thread = threading.Thread(target=start_watcher, daemon=True)
+        watcher_thread.start()
     app.run(host="0.0.0.0", debug=True, port=5000)

@@ -16,3 +16,4 @@ ruff==0.9.3
 shapely==2.0.6
 requests-cache==0.6.4
 scikit-learn==1.6.1
+watchdog==6.0.0

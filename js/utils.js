@@ -190,3 +190,48 @@ export async function clearCacheExceptErrorPage() {
 
 // Also export the full object
 export const C = columnExports;
+
+const OutlinedPolyline = L.Polyline.extend({
+    options: {
+        outline: false,
+        outlineColor: '#000',
+        outlineWidth: 2 // extra width added on each side
+    },
+
+    _updatePath() {
+        if (!this._renderer || !this._renderer._ctx) {
+            return;
+        }
+
+        if (this.options.outline) {
+            this._updateOutline();
+        }
+
+        // Draw the normal line on top
+        this._renderer._updatePoly(this, false);
+    },
+
+    _updateOutline() {
+        const ctx = this._renderer._ctx;
+        const weight = this.options.weight || 5;
+        const outlineWidth = this.options.outlineWidth || 2;
+
+        // Temporarily override style
+        const originalColor = this.options.color;
+        const originalWeight = this.options.weight;
+
+        this.options.color = this.options.outlineColor;
+        this.options.weight = weight + outlineWidth * 2;
+
+        // Draw outline
+        this._renderer._updatePoly(this, false);
+
+        // Restore original style
+        this.options.color = originalColor;
+        this.options.weight = originalWeight;
+    }
+});
+
+export function outlinedPolyline (latlngs, options) {
+    return new OutlinedPolyline(latlngs, options);
+};

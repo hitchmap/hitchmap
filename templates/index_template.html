@@ -41,6 +41,27 @@
                      <a href="/ru/">🇷🇺</a> -->
             </div>
         </details>
+        <div id="recording-opacity-control" class="leaflet-bar horizontal-button recording-opacity-control">
+    <a href="javascript:void(0);" id="recording-opacity-btn" title="Toggle recording visibility">
+        <!--
+          Three dots connected by lines – represents a GPS track.
+          CSS changes the opacity of the whole SVG to reflect the current level.
+        -->
+        <svg id="recording-opacity-icon"
+             viewBox="0 0 30 30"
+             width="30" height="30"
+             xmlns="http://www.w3.org/2000/svg"
+             style="display:block; pointer-events:none;">
+            <!-- Irregular GPS-trail path connecting the dots -->
+            <polyline points="7,20 13,11 19,17 24,8"
+                      fill="none" stroke="#3388ff" stroke-width="1.2" stroke-linejoin="round"/>
+            <circle cx="7"  cy="20" r="2" fill="#3388ff" stroke="white" stroke-width="0.8"/>
+            <circle cx="13" cy="11" r="2" fill="#3388ff" stroke="white" stroke-width="0.8"/>
+            <circle cx="19" cy="17" r="2" fill="#3388ff" stroke="white" stroke-width="0.8"/>
+            <circle cx="24" cy="8"  r="2" fill="#3388ff" stroke="white" stroke-width="0.8"/>
+        </svg>
+    </a>
+        </div>
         <div id="network-control" class="leaflet-bar horizontal-button">
             <!-- <i class="fa-solid fa-wifi small-centered-icon" href="javascript:void(0);" id="network-toggle" data-title-enabled="Network updates enabled (click to disable)" data-title-disabled="Network updates disabled (click to enable)"></i> -->
             <svg class="small-centered-icon" viewBox="-6 -6 36 36" fill="currentColor" style="vertical-align: middle;" id="network-toggle" data-title-enabled="Network updates enabled (click to disable)" data-title-disabled="Network updates disabled (click to enable)">

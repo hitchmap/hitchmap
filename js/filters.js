@@ -20,9 +20,7 @@ let shareSecret, fetchInterval, sharedRecordings;
 
 export let lastSharedCoord;
 
-export let filterDestLineGroup = null,
-filterMarkerGroup = null,
-sharedRecordingGroup = L.layerGroup();
+export let sharedRecordingGroup = L.layerGroup();
 
 const RemoveFilterButtons = L.Control.extend({
     options: {
@@ -118,18 +116,17 @@ export function applyParams() {
         knobLine.style.transform = `translateX(-50%) rotate(${normalizedAngle}deg)`;
         knobCone.style.transform = `rotate(${normalizedAngle}deg)`;
         rotationValue.textContent = `${Math.round(normalizedAngle)}°`;
-        radAngle = (normalizedAngle - 90) * (Math.PI / 180); // Update radAngle for consistency
+        radAngle = (normalizedAngle - 90) * (Math.PI / 180);
     }
 
     spreadInput.value = spread;
-    const radiansSpread = spread * (Math.PI / 180); // Convert spread angle to radians
+    const radiansSpread = spread * (Math.PI / 180);
 
-    const multiplier = 100; // Factor to increase the cone's distance
+    const multiplier = 100;
 
-    // Calculate cone boundaries using trigonometry and multiply by the multiplier
-    const leftX = 50 - Math.sin(radiansSpread) * 50 * multiplier; // 50 is the radius
+    const leftX = 50 - Math.sin(radiansSpread) * 50 * multiplier;
     const rightX = 50 + Math.sin(radiansSpread) * 50 * multiplier;
-    const topY = 50 - Math.cos(radiansSpread) * 50 * multiplier; // Top vertex
+    const topY = 50 - Math.cos(radiansSpread) * 50 * multiplier;
 
     knobCone.style.clipPath = `polygon(50% 50%, ${leftX}% ${topY}%, ${rightX}% ${topY}%)`;
 
@@ -142,9 +139,9 @@ export function applyParams() {
 
     updateRemoveFilterButtons()
 
+    const OUT_OF_BOUNDS = L.latLng(0, -99999);
+
     if (knobToggle.checked || textFilter.value || userFilter.value || distanceFilter.value || startTimeFilter.value || endTimeFilter.value) {
-        if (filterMarkerGroup) filterMarkerGroup.remove()
-        if (filterDestLineGroup) filterDestLineGroup.remove()
 
         // Start with all reviews
         let filteredReviews = window.reviewData;
@@ -201,7 +198,9 @@ export function applyParams() {
                 if (!review._marker) return false;
 
                 const marker = review._marker;
-                const from = marker.getLatLng();
+                const from = marker.options._row
+                    ? L.latLng(marker.options._row[0], marker.options._row[1])
+                    : marker.getLatLng();
                 const destLat = review[C.DEST_LAT];
                 const destLon = review[C.DEST_LON];
 
@@ -218,36 +217,35 @@ export function applyParams() {
         // Get unique markers from filtered reviews
         const uniqueMarkers = new Set();
         filteredReviews.forEach(review => {
-            if (review._marker) {
-                uniqueMarkers.add(review._marker);
+            if (review._marker) uniqueMarkers.add(review._marker);
+        });
+
+        // Move non-matching markers out of bounds, restore matching ones
+        window.allMarkers.forEach(marker => {
+            const row = marker.options._row;
+            if (uniqueMarkers.has(marker)) {
+                if (row) marker.setLatLng(L.latLng(row[0], row[1]));
+            } else {
+                marker.setLatLng(OUT_OF_BOUNDS);
             }
         });
 
-        // Convert Set to array and create filtered marker copies
-        const filterMarkers = Array.from(uniqueMarkers).map(spot => {
-            let loc = spot.getLatLng();
-            let marker = new L.circleMarker(loc, Object.assign({}, spot.options, { pane: 'filtering' }));
-            marker.on('click', e => spot.fire('click', e));
-            return marker;
-        });
-
-        filterMarkerGroup = L.layerGroup(
-            filterMarkers.reverse(), { pane: 'filtering' }
-        ).addTo(window.map);
-
         document.body.classList.add('filtering');
     } else {
+        // Restore all markers to their original positions
+        window.allMarkers.forEach(marker => {
+            const row = marker.options._row;
+            if (row) marker.setLatLng(L.latLng(row[0], row[1]));
+        });
         document.body.classList.remove('filtering');
     }
 
     const newShareSecret = getQueryParameter('share-secret');
 
-
     if (newShareSecret != shareSecret) {
         document.body.classList.toggle('has-share-secret', !!newShareSecret);
         shareSecret = newShareSecret;
 
-        // Clear any existing interval
         if (fetchInterval) {
             clearInterval(fetchInterval);
             fetchInterval = sharedRecordings = null;
@@ -260,7 +258,6 @@ export function applyParams() {
             return;
         }
 
-        // Function to fetch and draw the latest recording
         const fetchAndDrawRecording = async () => {
             try {
                 const response = await fetch(`/latest-recording/${shareSecret}`);
@@ -271,7 +268,6 @@ export function applyParams() {
 
                 const data = await response.json();
                 if (data.success && data.locations) {
-                    // Format the data to match drawRecordings expected structure
                     sharedRecordings = {
                         [data.recording_id]: data.locations
                     };
@@ -293,11 +289,7 @@ export function applyParams() {
         };
 
         document.body.dataset.centeringMode = 'shared';
-
-        // Fetch immediately
         fetchAndDrawRecording();
-
-        // Then fetch every 30 seconds
         fetchInterval = setInterval(fetchAndDrawRecording, 30000);
     }
 }

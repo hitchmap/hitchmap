@@ -217,7 +217,7 @@ def get_user():
         locations = merge_slow_points_grid_df(locations)
 
         recordings = {
-            recording_id: group[["latitude", "longitude", "timestamp"]].to_dict("records")
+            recording_id: group[["latitude", "longitude", "timestamp", "seconds_spent"]].to_dict("records")
             for recording_id, group in locations.groupby("recording_id")
         }
 

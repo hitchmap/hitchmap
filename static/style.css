@@ -201,11 +201,44 @@ body.zooming .leaflet-heatmap-layer, body:not(.zoomed-out) .leaflet-heatmap-laye
 body.has-points .leaflet-overlay-pane {
     opacity: 0.3;
 }
-body.filtering .leaflet-overlay-pane, body.filtering .leaflet-marker-pane {
+/* Hide the toggle unless the user has recordings AND is not zoomed out */
+#recording-opacity-control {
+    display: none !important;
+}
+body.has-recordings:not(.zoomed-out) #recording-opacity-control {
+    display: revert !important;
+}
+
+/* ─── Recording pane opacity ────────────────────────────────────────────────── */
+/* Zoomed out: recordings always at full opacity regardless of toggle */
+body.zoomed-out .leaflet-user-recordings-pane {
+    opacity: 1 !important;
+}
+
+/* Zoomed in: respect the three opacity levels */
+body:not(.zoomed-out)[data-recording-opacity="1"] .leaflet-user-recordings-pane {
+    opacity: 1;
+}
+body:not(.zoomed-out)[data-recording-opacity="0.5"] .leaflet-user-recordings-pane {
+    opacity: 0.5;
+}
+body:not(.zoomed-out)[data-recording-opacity="0"] .leaflet-user-recordings-pane {
     display: none;
 }
-body:not(.filtering) .leaflet-filtering-pane {
-    display: none;
+/* Default (no attribute set yet) – treat as full opacity */
+body:not(.zoomed-out):not([data-recording-opacity]) .leaflet-user-recordings-pane {
+    opacity: 1;
+}
+
+/* ─── Icon opacity mirrors current level ────────────────────────────────────── */
+body[data-recording-opacity="1"]   #recording-opacity-icon { opacity: 1;    }
+body[data-recording-opacity="0.5"] #recording-opacity-icon { opacity: 0.5;  }
+body[data-recording-opacity="0"] #recording-opacity-icon { opacity: 0.15; }
+
+/* Zoomed-out always shows the icon at full opacity */
+body.zoomed-out #recording-opacity-icon { opacity: 1; }
+#recording-opacity-btn {
+    padding: 0px !important;
 }
 body.filtering .remove-filter {
     border-color: rgba(255, 0, 0, .5);
