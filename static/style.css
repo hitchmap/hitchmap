@@ -260,10 +260,6 @@ body.filtering .filter-button a::after {
         font-size: 14px;
     }
 }
-.donate-button img {
-    background-color: rgba(0,0,0,.1);
-    box-shadow: 0 0 5px rgba(0,0,0,.3);
-}
 .leaflet-control-attribution {
     text-align: right;
 }

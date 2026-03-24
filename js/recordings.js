@@ -340,7 +340,7 @@ export function drawRecordings(recordingGroup, recordings, lastTimestamp) {
         const trackColor = '#38f';
         const latLngs = locations.map(loc => [loc.latitude, loc.longitude]);
         const isCurrentRecording = recordingId === drawRecordingId;
-        const baseOpacity = isCurrentRecording ? 0.6 : 0.4;
+        const baseOpacity = .3;
         const markerOpacity = isCurrentRecording ? 1 : 0.9;
 
         const recordingLayers = [];
@@ -372,23 +372,28 @@ export function drawRecordings(recordingGroup, recordings, lastTimestamp) {
                 .catch(() => alert('Failed to delete recording.'));
         }
 
-        // --- Back-pane polyline (visible) ---
-        let plBack = L.polyline(latLngs, {
-            color: trackColor,
-            weight: 3,
+        // --- Back-pane polyline (visible, with outline) ---
+        let plBack = outlinedPolyline(latLngs, {
+            color: '#fff',
+            weight: 1,
             opacity: baseOpacity,
             pane: 'user-recordings',
             interactive: false,
+            outline: true,
+            outlineColor: '#009',
+            outlineWidth: 1,
         });
         plBack.addTo(backGroup);
         recordingLayers.push({ layer: plBack, type: 'polyline' });
 
         // --- Front-pane polyline (invisible, handles interaction) ---
-        let pl = L.polyline(latLngs, {
-            color: trackColor,
-            weight: 3,
+        // outlineWidth matches back so the hit area is the same total width.
+        let pl = outlinedPolyline(latLngs, {
+            weight: 1,
             opacity: 0,
             fillOpacity: 0,
+            outline: true,
+            outlineWidth: 1
         });
 
         pl.bindPopup((layer) => {
