@@ -19,7 +19,7 @@ class UserLocation(db.Model):
     timestamp = db.Column(db.BigInteger, nullable=False)  # Unix timestamp in milliseconds
     speed = db.Column(db.Float, nullable=True)
     heading = db.Column(db.Float, nullable=True)
-    created_at = db.Column(db.DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP"))
+    created_at = db.Column(db.DateTime, nullable=False)
 
     tracking = db.Column(db.Boolean, nullable=False)  # True for tracking, False for sharing only
 
@@ -48,11 +48,11 @@ def post_location():
         sql = text("""
             INSERT OR REPLACE INTO user_locations (
                 user_id, recording_id, latitude, longitude,
-                accuracy, timestamp, speed, heading, tracking
+                accuracy, timestamp, speed, heading, tracking, created_at
             )
             VALUES (
                 :user_id, :recording_id, :latitude, :longitude,
-                :accuracy, :timestamp, :speed, :heading, :tracking
+                :accuracy, :timestamp, :speed, :heading, :tracking, CURRENT_TIMESTAMP
             )
         """)
 

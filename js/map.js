@@ -7,7 +7,7 @@ import {fetchCurrentUser, currentUser, firstUserPromise, userMarkerGroup, create
 import {pendingGroup, updatePendingMarkers, addPending, getFuturePending} from './pending';
 import {renderReviews} from './render-reviews';
 import {maybeAddNetworkButton} from './network-button';
-import {drawRecordings, initializeUserLocationDisplay} from './recordings';
+import {drawRecordings, initializeUserLocationDisplay, initRecordingPicker} from './recordings';
 
 // Register service worker for offline functionality
 if ("serviceWorker" in navigator) {
@@ -155,6 +155,8 @@ firstUserPromise.then(user => {
     drawRecordings(userRecordingsGroup, user.recordings, user.last_location_timestamp)
     document.querySelector('#account-control a').innerText = '👤 ' + user.username;
     document.body.classList.toggle('has-recordings', user.last_location_timestamp);
+    // Initialize recording picker after recordings are loaded
+    initRecordingPicker(userRecordingsGroup, user.recordings);
 })
 
 setInterval(async () => {
@@ -165,6 +167,8 @@ setInterval(async () => {
     drawRecordings(userRecordingsGroup, user.recordings, user.last_location_timestamp);
     document.querySelector('#account-control a').innerText = '👤 ' + user.username;
     document.body.classList.toggle('has-locations', user.last_location_timestamp);
+    // Re-initialize picker on refresh
+    initRecordingPicker(userRecordingsGroup, user.recordings);
 }, 60000)
 
 let allMarkerGroup = L.layerGroup(allMarkers)
@@ -308,34 +312,9 @@ refreshEl.onclick = refreshPending.onclick = async e => {
 }
 
 addAsLeafletControl('#lang-control');
-addAsLeafletControl('#recording-opacity-control');
 
-(function() {
-    // Cycle: 1 → 0.5 → 0.1 → 1 …
-    const LEVELS = ['1', '0.5', '0'];
-    let idx = 0;
-
-    // Restore persisted preference
-    const stored = localStorage.getItem('recordingOpacity');
-    if (stored && LEVELS.includes(stored)) {
-        idx = LEVELS.indexOf(stored);
-    }
-
-    function applyLevel() {
-        document.body.dataset.recordingOpacity = LEVELS[idx];
-        localStorage.setItem('recordingOpacity', LEVELS[idx]);
-    }
-
-    applyLevel();
-
-    document.getElementById('recording-opacity-btn')?.addEventListener('click', e => {
-        L.DomEvent.stopPropagation(e);
-        idx = (idx + 1) % LEVELS.length;
-        applyLevel();
-    });
-})();
-
-
+// Recording picker control (visibility governed by body.has-multiple-recordings via CSS)
+addAsLeafletControl('#recording-picker-control', 'bottomleft');
 
 // GPS and geocoder remain in the same sequence
 // L.control.locate().addTo(map);

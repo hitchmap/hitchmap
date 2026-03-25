@@ -219,6 +219,7 @@ def get_user():
         recordings = {
             recording_id: group[["latitude", "longitude", "timestamp", "seconds_spent"]].to_dict("records")
             for recording_id, group in locations.groupby("recording_id")
+            if len(group) > 1 or group["seconds_spent"].iloc[0] > 300
         }
 
         return jsonify(

@@ -201,44 +201,138 @@ body.zooming .leaflet-heatmap-layer, body:not(.zoomed-out) .leaflet-heatmap-laye
 body.has-points .leaflet-overlay-pane {
     opacity: 0.3;
 }
-/* Hide the toggle unless the user has recordings AND is not zoomed out */
-#recording-opacity-control {
+
+/* ─── Recording picker control ───────────────────────────────────────────────── */
+#recording-picker-control {
     display: none !important;
+    align-items: center;
+    padding: 0 !important;
+    overflow: visible !important; /* allow tooltip to escape */
+    position: relative;
 }
-body.has-recordings:not(.zoomed-out) #recording-opacity-control {
-    display: revert !important;
+body.has-multiple-recordings #recording-picker-control {
+    display: flex !important;
+}
+/* When showing-all-recordings, hide the whole picker control and the tooltip caret */
+body.showing-all-recordings #recording-picker-control, body.showing-all-recordings .recording-thumb-tooltip:after {
+    display: flex !important;
+    visibility: hidden;
+}
+body.showing-all-recordings .recording-thumb-tooltip {
+    display: flex !important;
+    visibility: visible;
 }
 
-/* ─── Recording pane opacity ────────────────────────────────────────────────── */
-/* Zoomed out: recordings always at full opacity regardless of toggle */
-body.zoomed-out .leaflet-user-recordings-pane {
-    opacity: 1 !important;
+/* Prev / Next arrow buttons */
+.recording-picker-arrow {
+    background: white;
+    border: none;
+    border-radius: 0;
+    font-size: 18px;
+    line-height: 44px;
+    height: 44px;
+    width: 22px;
+    padding: 0;
+    cursor: pointer;
+    color: #333;
+    transition: background 0.1s;
+    flex-shrink: 0;
+    margin: 0 !important;
+}
+.recording-picker-arrow:hover:not(:disabled) {
+    background: #f0f0f0;
+}
+.recording-picker-arrow:disabled {
+    color: #ccc;
+    cursor: default;
+}
+#recording-picker-prev {
+    border-radius: 4px 0 0 4px;
+    border-right: 1px solid #e0e0e0;
+}
+#recording-picker-next {
+    border-radius: 0 4px 4px 0;
+    border-left: 1px solid #e0e0e0;
 }
 
-/* Zoomed in: respect the three opacity levels */
-body:not(.zoomed-out)[data-recording-opacity="1"] .leaflet-user-recordings-pane {
-    opacity: 1;
+/* Thumb — keep existing, tweak to sit flush between arrows */
+.recording-picker-thumb {
+    background: white;
+    cursor: pointer;
+    flex-shrink: 0;
+    border-left: none;
+    border-right: none;
+    width: 44px;
+    height: 44px;
 }
-body:not(.zoomed-out)[data-recording-opacity="0.5"] .leaflet-user-recordings-pane {
-    opacity: 0.5;
+.recording-picker-thumb .rec-date {
+    font-size: 9px;
+    text-align: center;
+    color: #333;
+    font-family: monospace;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 1px 0 0;
+    line-height: 1.2;
 }
-body:not(.zoomed-out)[data-recording-opacity="0"] .leaflet-user-recordings-pane {
+
+/* ─── Thumb tooltip ──────────────────────────────────────────────────────────── */
+.recording-thumb-tooltip {
     display: none;
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 0;
+    background: white;
+    border: 1.5px solid rgba(0,0,0,0.18);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+    padding: 10px 12px;
+    z-index: 2200;
+    flex-direction: column;
+    gap: 8px;
+    font-family: sans-serif;
+    font-size: 12px;
+    white-space: nowrap;
 }
-/* Default (no attribute set yet) – treat as full opacity */
-body:not(.zoomed-out):not([data-recording-opacity]) .leaflet-user-recordings-pane {
-    opacity: 1;
+#recording-picker-control.tooltip-open .recording-thumb-tooltip {
+    display: flex;
 }
-
-/* ─── Icon opacity mirrors current level ────────────────────────────────────── */
-body[data-recording-opacity="1"]   #recording-opacity-icon { opacity: 1;    }
-body[data-recording-opacity="0.5"] #recording-opacity-icon { opacity: 0.5;  }
-body[data-recording-opacity="0"] #recording-opacity-icon { opacity: 0.15; }
-
-/* Zoomed-out always shows the icon at full opacity */
-body.zoomed-out #recording-opacity-icon { opacity: 1; }
-#recording-opacity-btn {
-    padding: 0px !important;
+/* small downward caret */
+.recording-thumb-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 40px;
+    border: 6px solid transparent;
+    border-top-color: white;
+    filter: drop-shadow(0 1px 0 rgba(0,0,0,0.12));
+}
+.rtt-show-all {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    user-select: none;
+}
+.rtt-show-all input[type=checkbox] {
+    margin: 0;
+    cursor: pointer;
+}
+.rtt-delete {
+    background: #e53e3e;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 4px 10px;
+    cursor: pointer;
+    font-size: 11px;
+    text-align: left;
+    margin: 0 !important;
+    width: 100% !important;
+}
+.rtt-delete:hover {
+    background: #c53030;
 }
 body.filtering .remove-filter {
     border-color: rgba(255, 0, 0, .5);

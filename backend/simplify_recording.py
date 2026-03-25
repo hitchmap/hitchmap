@@ -109,7 +109,7 @@ def merge_slow_points_grid_df(
     dist_prev = 2 * EARTH_RADIUS_M * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
     speed = (dist_prev / 1000) / dt_hours
 
-    break_mask = df["lat_prev"].isna() | (dt_hours <= 0) | (speed >= speed_kmh)
+    break_mask = (dt_hours > 0) & (df["lat_prev"].isna() | (speed >= speed_kmh))
     df["segment"] = break_mask.groupby(df["recording_id"]).cumsum()
 
     # 2. SPLIT SEGMENTS THAT ARE FURTHER THAN ~grid_size_m APART
@@ -122,9 +122,9 @@ def merge_slow_points_grid_df(
         df["lat_anchor"],
         df["lon_anchor"],
     )
-    half = grid_size_m / 2
-    df["grid_x"] = np.floor((dx + half) / grid_size_m).astype(int)
-    df["grid_y"] = np.floor((dy + half) / grid_size_m).astype(int)
+    # calculate grid locations, merge the nearest 8 grid cells with with the center cell
+    df["grid_x"] = np.round(dx / grid_size_m).astype(int).replace({-1: 0, 1: 0})
+    df["grid_y"] = np.round(dy / grid_size_m).astype(int).replace({-1: 0, 1: 0})
 
     # 3. AGGREGATE SEGMENTS — also track time span for seconds_spent
     merged = (
@@ -135,8 +135,7 @@ def merge_slow_points_grid_df(
         .agg(
             latitude=("latitude", "median"),
             longitude=("longitude", "median"),
-            timestamp=("timestamp", "mean"),
-            ts_min=("timestamp", "min"),
+            timestamp=("timestamp", "min"),
             ts_max=("timestamp", "max"),
             n_pts=("timestamp", "count"),
         )
@@ -144,11 +143,11 @@ def merge_slow_points_grid_df(
     )
 
     # seconds_spent > 0 only for merged (slow) clusters, 0 for lone points
-    merged["seconds_spent"] = ((merged["ts_max"] - merged["ts_min"]) / 1000).astype(int)
-    merged = merged.drop(columns=["ts_min", "ts_max", "n_pts"])
+    merged["seconds_spent"] = ((merged["ts_max"] - merged["timestamp"]) / 1000).astype(int)
+    merged = merged.drop(columns=["ts_max", "n_pts"])
 
     # 4. REMOVE SHORT LOOPS
     merged = merged.sort_values(["recording_id", "timestamp"])
-    # merged = remove_short_loops(merged, loop_speed_kmh=loop_speed_kmh, min_loop_minutes=loop_minutes)
+    merged = remove_short_loops(merged, loop_speed_kmh=loop_speed_kmh, min_loop_minutes=loop_minutes)
 
     return merged.reset_index(drop=True)
