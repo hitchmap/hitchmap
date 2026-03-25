@@ -535,6 +535,8 @@ export function drawRecordings(recordingGroup, recordings, lastTimestamp) {
 
         const recordingLayers = [];
 
+        const stops = locations.filter(loc => loc.seconds_spent > 300);
+
         function resetRecording() {
             recordingLayers.forEach(({ layer, type }) => {
                 if (type === 'polyline') {
@@ -577,19 +579,16 @@ export function drawRecordings(recordingGroup, recordings, lastTimestamp) {
         recordingLayers.push({ layer: plBack, type: 'polyline' });
 
         const latLngs = locations.map(loc => [loc.latitude, loc.longitude]);
-        const pl = outlinedPolyline(latLngs, {
-            weight: isCurrentRecording ? 2 : 1,
+        const pl = L.polyline(latLngs, {
+            weight: 10,
             opacity: 0,
             fillOpacity: 0,
-            outline: true,
-            outlineWidth: 1
         });
 
         pl.bindPopup((layer) => {
             const container = L.DomUtil.create('div');
             container.innerHTML = `
-                <b>Recording ${drawRecordingId}</b><br>
-                Points: ${locations.length}<br>
+                Stops: ${stops.length}<br>
                 <button class="delete-recording-btn" style="margin-top:6px;color:white;background:#e53e3e;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;">Delete</button>
                 <button class="add-review-btn" style="margin-top:6px;color:white;background:#38a169;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;">Add review</button>
             `;
@@ -604,6 +603,8 @@ export function drawRecordings(recordingGroup, recordings, lastTimestamp) {
             });
             return container;
         });
+
+        pl.on('click', e => L.DomEvent.stopPropagation(e))
 
         pl.on('popupopen', () => {
             plBack.setStyle({ color: 'red', opacity: 0.8 });
@@ -621,8 +622,7 @@ export function drawRecordings(recordingGroup, recordings, lastTimestamp) {
 
         pl.addTo(recordingGroup);
 
-        locations.forEach((loc, index) => {
-            if (loc.seconds_spent <= 300) return;
+        stops.forEach((loc, index) => {
             const radius        = 5;
             const isSinglePoint = locations.length === 1;
 
@@ -650,12 +650,10 @@ export function drawRecordings(recordingGroup, recordings, lastTimestamp) {
             cm.bindPopup(() => {
                 const container = L.DomUtil.create('div');
                 container.innerHTML = `
-                    <b>Recording ${drawRecordingId}</b><br>
-                    Point ${index + 1} of ${locations.length}<br>
+                    Stop ${index + 1} of ${stops.length}<br>
                     Arrival: ${loc.timestamp ? new Date(loc.timestamp).toLocaleString() : 'N/A'}<br>
                     Time spent: ${Math.ceil(loc.seconds_spent/60)} min<br>
-                    Lat: ${loc.latitude.toFixed(6)}<br>
-                    Lng: ${loc.longitude.toFixed(6)}<br>
+                    ${loc.latitude.toFixed(6)}, ${loc.longitude.toFixed(6)}<br>
                     ${isSinglePoint ? `<button class="delete-recording-btn" style="margin-top:6px;color:white;background:#e53e3e;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;">Delete</button>` : ''}
                     <button class="add-review-btn" style="margin-top:6px;color:white;background:#38a169;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;">Add review</button>
                 `;
@@ -731,11 +729,9 @@ function drawLocalRecordings() {
                 weight: 2,
                 interactive: true,
             }).bindPopup(`
-                <b>Recording ${loc.recording_id}</b><br>
                 <i>Local (not yet synced)</i><br>
                 Time: ${loc.time ? new Date(loc.time).toLocaleString() : 'N/A'}<br>
-                Lat: ${loc.latitude.toFixed(6)}<br>
-                Lng: ${loc.longitude.toFixed(6)}
+                ${loc.latitude.toFixed(6)}, ${loc.longitude.toFixed(6)}
             `).addTo(localRecordingGroup);
         });
 

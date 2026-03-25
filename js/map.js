@@ -414,8 +414,8 @@ function initializeSpotForm(points, destinationProvided) {
     $$("#nickname-container").classList.toggle("make-invisible", !!currentUser);
     $$('#spot-form input[name=coords]').value = `${points[0].lat},${points[0].lng},${points[1].lat},${points[1].lng}`
     $$('#spot-form textarea[name=comment]').oninput = e => {
-        e.target.style.height = 'auto'; // Reset height
-        e.target.style.height = e.target.scrollHeight + 'px'; // Set new height
+        e.target.style.height = 'auto';
+        e.target.style.height = e.target.scrollHeight + 'px';
     }
 
     const form = $$("#spot-form");
@@ -426,6 +426,79 @@ function initializeSpotForm(points, destinationProvided) {
         uname.value = localStorage.getItem('nick')
         uname.onchange = e => localStorage.setItem('nick', uname.value)
     }
+
+    // ── Prefill from recording data ──────────────────────────────────────────
+    const pf = window.prefillReviewData;
+    const form_el = $$("#spot-form");
+    const waitInput = $$('#spot-form input[name=wait]');
+    const btn5  = $$('#wait-btn-5');
+    const btn15 = $$('#wait-btn-15');
+
+    // Check if the prefill location matches the spot being added
+    const MATCH_THRESHOLD_M = 50;
+    let hasPrefill = false;
+    if (pf && pf.latitude != null && pf.longitude != null) {
+        const pfPoint = L.latLng(pf.latitude, pf.longitude);
+        const spotPoint = L.latLng(points[0].lat, points[0].lng);
+        hasPrefill = spotPoint.distanceTo(pfPoint) < MATCH_THRESHOLD_M;
+    }
+
+    form_el.classList.toggle('has-prefill', hasPrefill);
+
+    if (hasPrefill) {
+        const totalMin = Math.ceil(pf.seconds_spent / 60);
+        const prefillWait = pf.seconds_spent < 600
+            ? Math.ceil(pf.seconds_spent / 2 / 60)
+            : totalMin - 5;
+
+        // Show hint
+        $$('#time-spent-display').textContent = totalMin;
+
+        // Prefill wait time
+        waitInput.value = prefillWait;
+
+        // Show/hide break buttons based on total time >= 16 min
+        form_el.classList.toggle('prefill-long', totalMin >= 16);
+
+        // Prefill ride datetime = timestamp + seconds_spent
+        if (pf.timestamp) {
+            const rideTime = new Date(new Date(pf.timestamp).getTime() + pf.seconds_spent * 1000);
+            const localISO = new Date(rideTime.getTime() - rideTime.getTimezoneOffset() * 60000)
+                .toISOString().slice(0, 16);
+            $$('#datetime_ride').value = localISO;
+            // Open the details section since datetime is prefilled
+            const details = $$("#extended_info");
+            details.open = true;
+        }
+
+        // Button highlight helper
+        function updateBtnHighlight() {
+            const v = parseInt(waitInput.value, 10);
+            btn5.classList.toggle('active',  v === totalMin - 5);
+            btn15.classList.toggle('active', v === totalMin - 15);
+        }
+
+        waitInput.addEventListener('input', updateBtnHighlight);
+        updateBtnHighlight();
+
+        btn5.onclick = () => {
+            waitInput.value = Math.max(0, totalMin - 5);
+            updateBtnHighlight();
+        };
+        btn15.onclick = () => {
+            waitInput.value = Math.max(0, totalMin - 15);
+            updateBtnHighlight();
+        };
+    } else {
+        // Clear any stale prefill state
+        $$('#prefill-hint-text').textContent = '';
+        form_el.classList.remove('prefill-long');
+        btn5.onclick = null;
+        btn15.onclick = null;
+    }
+
+    // Clear prefillReviewData so it doesn't accidentally carry over
+    window.prefillReviewData = null;
 }
 
 bars.forEach(bar => {
@@ -455,7 +528,7 @@ map.on('click', e => {
             opened = true
             closest.fire('click', e)
         } else {
-            let userPolylines = userRecordingsGroup.getLayers().filter(e => e.getLatLngs)
+            let userPolylines = userRecordingsGroup.getLayers().filter(e => e.getLatLngs && e.options.interactive !== false)
             let res = findClosestPolyline(e.latlng, userPolylines)
             if (map.latLngToLayerPoint(res.point).distanceTo(layerPoint) < 20) {
                 opened = true

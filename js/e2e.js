@@ -144,7 +144,7 @@ Promise.all([async browser => {
     await page.fill('[name="comment"]', 'a');
 
     // Click on <button> "Submit"
-    await page.click('button:nth-child(11)');
+    await page.click('button.submit-spot-button');
 
     await page.waitForSelector('.sidebar.success.visible')
 

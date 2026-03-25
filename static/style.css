@@ -17,6 +17,18 @@ h3, h4 {
 h4 {
     padding-top: 20px;
 }
+button {
+    appearance: none;
+    -moz-appearance: none;
+    border: 1px solid rgb(143, 143, 157);
+    border-radius: 3px;
+    background: rgb(233, 233, 237);
+    padding: 3px 4px;
+    cursor: pointer;
+}
+button:hover {
+    background: #e5e5e5;
+}
 input[type=radio] + label {
     font-weight: normal;
     margin-left: -5px;
@@ -59,7 +71,7 @@ input[type=radio] + label {
     margin-top: 30px;
     margin-bottom: 30px;
     width: 100%;
-    padding: 5px;
+    padding: 6px 5px;
     margin-top: 24px;
 }
 .no-margin-bottom {
@@ -143,6 +155,97 @@ body.adding-spot .horizontal-button {
 }
 #spot-form details select, #spot-form details input {
     margin-bottom: 18px;
+}
+.has-prefill #leave-blank {
+    display: none;
+}
+.prefill-hint {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    font-size: 0.82em;
+    color: #555;
+    font-family: sans-serif;
+}
+#spot-form.has-prefill .prefill-hint {
+    display: flex;
+}
+.prefill-hint-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #38f;
+    border: 1.5px solid white;
+    box-shadow: 0 0 0 1.5px rgba(0,0,0,0.05);
+    flex-shrink: 0;
+}
+
+/* Wait-time row */
+.wait-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+}
+.wait-row input[type=number] {
+    width: 60px;
+}
+.wait-break-btn {
+    font-size: 0.78em;
+    padding: 2px 7px;
+    border-radius: 3px;
+    border: 1px solid #bbb;
+    background: #f4f4f4;
+    color: #444;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.1s, border-color 0.1s;
+    margin: 0 !important;
+    width: auto !important;
+}
+.wait-break-btn:hover {
+    background: #e8e8e8;
+}
+.wait-break-btn.active {
+    background: #dbeafe;
+    border-color: #38f;
+    color: #1a56db;
+    font-weight: bold;
+}
+/* Hide break buttons unless prefill present AND total >= 16 min */
+.wait-break-btn {
+    display: none;
+}
+#spot-form.has-prefill.prefill-long .wait-break-btn {
+    display: inline-block;
+}
+
+#spot-form > label, #extended-info label {
+    margin-top: 20px;
+    font-size: 0.9em;
+}
+#spot-form textarea {
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    padding: 6px;
+    font-family: Georgia, serif;
+    font-size: 0.9em;
+    resize: vertical;
+    min-height: 60px;
+}
+#spot-form button[type=submit], #spot-form button:not(.wait-break-btn) {
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 1em;
+    letter-spacing: 0.01em;
+}
+#spot-form button[type=submit]:hover, #spot-form button:not(.wait-break-btn):hover {
+    background: #1d4ed8;
 }
 .rate {
     display: flex;

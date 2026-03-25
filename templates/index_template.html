@@ -96,8 +96,15 @@
                     <label for="star1" title="1 star">★ </label>
                 </div>
             </div>
-            <label>How long did you wait? Leave blank if you don't remember.</label>
-            <input type="number" name="wait" min="0" max="9999" size="4"> minutes
+            <label>How long did you wait? <span id="leave-blank">Leave blank if you don't remember.</span></label>
+            <div class="prefill-hint">
+                <span id="prefill-hint-text">Time spent at <span class="prefill-hint-dot"></span> : <span id="time-spent-display"></span> min</span>
+                <button type="button" class="wait-break-btn" id="wait-btn-5">−5 min</button>
+                <button type="button" class="wait-break-btn" id="wait-btn-15">−15 min</button>
+            </div>
+            <div class="wait-row">
+                <input type="number" name="wait" min="0" max="9999" size="4"> minutes
+            </div>
             <label>Comment (optional)</label>
             <div><textarea name=comment></textarea></div>
             <div id="nickname-container">
@@ -128,7 +135,7 @@
                  document.getElementById("datetime_ride").max = (new Date().toISOString().slice(0,11)) + "23:59";
                 </script>
             </details>
-            <button>Submit</button>
+            <button class="submit-spot-button">Submit</button>
         </form>
     </div>
     <div class="sidebar show-spot spot">
