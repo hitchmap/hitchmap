@@ -31,7 +31,7 @@
         "@capacitor/share": "^7.0.2",
         "@capacitor/splash-screen": "^7.0.3",
         "@capawesome/capacitor-android-edge-to-edge-support": "^7.2.3",
-        "cordova-background-geolocation-plugin": "^2.3.3",
+        "cordova-background-geolocation-plugin": "file:../cordova-background-geolocation-plugin",
         "cordova-plugin-device-orientation": "^3.0.0",
         "esbuild": "^0.24.2",
         "playwright": "^1.50.1"

@@ -12,7 +12,7 @@ from wtforms import IntegerField, SelectField, StringField, SubmitField, Boolean
 from wtforms.validators import Optional
 from wtforms.widgets import NumberInput
 from sqlalchemy import text
-from backend.simplify_recording import merge_slow_points_grid_df
+from backend.simplify_recording import simplify_recording
 
 from wtforms import EmailField, ValidationError
 from flask_security import ForgotPasswordForm
@@ -213,14 +213,12 @@ def get_user():
     else:
         last_location_timestamp = locations.timestamp.max().item()
 
-        # merge consecutive locations that are close together
-        locations = merge_slow_points_grid_df(locations)
-
-        recordings = {
-            recording_id: group[["latitude", "longitude", "timestamp", "seconds_spent"]].to_dict("records")
-            for recording_id, group in locations.groupby("recording_id")
-            if len(group) > 1 or group["seconds_spent"].iloc[0] > 300
-        }
+        recordings = {}
+        for recording_id, group in locations.groupby("recording_id"):
+            simplified = simplify_recording(group)
+            # keep only if more than 1 point or a stop longer than 5 min
+            if len(simplified) > 1 or simplified["seconds_spent"].max() > 300:
+                recordings[recording_id] = simplified.to_dict("records")
 
         return jsonify(
             {

@@ -3,6 +3,7 @@ from datetime import datetime
 from flask import jsonify, request
 from flask_security import current_user, login_required
 from sqlalchemy import text
+from backend.simplify_recording import simplify_recording
 
 from backend.shared import app, db, logger
 
@@ -41,6 +42,7 @@ with app.app_context():
 def post_location():
     datalist = request.get_json() or []
     for data in datalist:
+        print(data)
         # Add server-side fields
         data["user_id"] = current_user.id
 
@@ -48,11 +50,13 @@ def post_location():
         sql = text("""
             INSERT OR REPLACE INTO user_locations (
                 user_id, recording_id, latitude, longitude,
-                accuracy, timestamp, speed, heading, tracking, created_at
+                accuracy, timestamp, speed, tracking, created_at,
+                activity, activity_timestamp
             )
             VALUES (
                 :user_id, :recording_id, :latitude, :longitude,
-                :accuracy, :timestamp, :speed, :heading, :tracking, CURRENT_TIMESTAMP
+                :accuracy, :timestamp, :speed, :tracking, CURRENT_TIMESTAMP,
+                :activity, :activity_timestamp
             )
         """)
 
@@ -81,16 +85,7 @@ def get_latest_recording(location_share_secret):
                 LIMIT 1
             )
             SELECT
-                ul.id,
-                ul.user_id,
-                ul.recording_id,
-                ul.latitude,
-                ul.longitude,
-                ul.accuracy,
-                ul.timestamp,
-                ul.speed,
-                ul.heading,
-                ul.tracking,
+                ul.*,
                 le.username
             FROM user_locations ul
             INNER JOIN latest_entry le ON ul.recording_id = le.recording_id
@@ -122,7 +117,7 @@ def get_latest_recording(location_share_secret):
                 "recording_id": locations[0]["recording_id"],
                 "username": locations[0]["username"],
                 "tracking": bool(locations[-1]["tracking"]),
-                "locations": locations,
+                "locations": simplify_locations(locations),
             }
         ), 200
 

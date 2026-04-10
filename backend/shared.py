@@ -37,6 +37,10 @@ def get_or_create_secret_key():
     return secret_key
 
 
+def short_id_to_long_id(short_id):
+    return int.from_bytes(base64.urlsafe_b64decode(short_id), byteorder="big", signed=False)
+
+
 print(dist_dir)
 app = Flask(__name__, template_folder=os.path.join(root_dir, "templates"))
 app.config["DEBUG"] = DATABASE == "prod-points.sqlite"

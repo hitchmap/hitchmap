@@ -20,8 +20,6 @@ let shareSecret, fetchInterval, sharedRecordings;
 
 export let lastSharedCoord;
 
-export let sharedRecordingGroup = L.layerGroup();
-
 const RemoveFilterButtons = L.Control.extend({
     options: {
         position: 'topleft'
@@ -249,7 +247,7 @@ export function applyParams() {
         if (fetchInterval) {
             clearInterval(fetchInterval);
             fetchInterval = sharedRecordings = null;
-            sharedRecordingGroup.clearLayers();
+            drawRecordings({});
         }
 
         if (!shareSecret) {
@@ -271,7 +269,7 @@ export function applyParams() {
                     sharedRecordings = {
                         [data.recording_id]: data.locations
                     };
-                    drawRecordings(sharedRecordingGroup, sharedRecordings);
+                    drawRecordings(sharedRecordings);
 
                     lastSharedCoord = lastCoordinate(sharedRecordings);
                     if (lastSharedCoord && lastSharedCoord.coordinates) {

@@ -1,6 +1,6 @@
 import { firstUserPromise } from './user';
 import { UserLocationDisplay } from './user-location-display';
-import { outlinedPolyline } from './utils';
+import { outlinedPolyline, findClosestLocation, closestMarker, polygonDistanceToLatLng, addOutlineRing } from './utils';
 
 let isTracking = false;
 let shareSecret;
@@ -10,6 +10,7 @@ export let localLocationsList = [];
 
 let userLocationDisplay;
 let lastRecordingTimestamp;
+export let recordingGroup;
 let localRecordingGroup;
 let localRecordingGroupBack;
 
@@ -48,6 +49,9 @@ function savePickerSelection(id, completedIds) {
 }
 
 export async function initializeUserLocationDisplay() {
+    recordingGroup     = L.layerGroup([], {hitchmapBackground: true}).addTo(window.map);
+    if (!window.Capacitor) return;
+
     userLocationDisplay = window.hitchmapTracker.uld = new UserLocationDisplay(window.map, {
         drawCircle: true,
         drawMarker: true,
@@ -149,7 +153,9 @@ function recordingDate(recId) {
 
 // ─── Recording picker (prev/next arrows + tooltip) ───────────────────────────
 
-export function initRecordingPicker(recordingGroup, recordings) {
+export function initRecordingPicker(recordings, lastTimestamp) {
+    if (lastTimestamp) lastRecordingTimestamp = lastTimestamp;
+
     if (!recordings) return;
 
     const completedIds = Object.keys(recordings).filter(id => id !== recordingId);
@@ -173,15 +179,15 @@ export function initRecordingPicker(recordingGroup, recordings) {
     const showAll = loadShowAll();
     document.body.classList.toggle('showing-all-recordings', showAll);
 
-    applyAndRender(recordingGroup, recordings, completedIds);
-    bindPickerControls(recordingGroup, recordings, completedIds);
+    applyAndRender(recordings, completedIds);
+    bindPickerControls(recordings, completedIds);
 }
 
-function applyAndRender(recordingGroup, recordings, completedIds) {
+function applyAndRender(recordings, completedIds) {
     if (loadShowAll()) {
-        drawRecordings(recordingGroup, recordings, lastRecordingTimestamp);
+        drawRecordings(recordings, lastRecordingTimestamp);
     } else {
-        applyPickerSelection(recordingGroup, recordings, activePickerSelection);
+        applyPickerSelection(recordings, activePickerSelection);
     }
     updateThumb(recordings, completedIds, activePickerSelection);
 }
@@ -192,7 +198,7 @@ function updateThumb(recordings, completedIds, selection) {
 
     const locs      = (selection && recordings[selection]) || [];
     const isCurrent = selection === recordingId;
-    renderTrackSvg(svgEl, locs, isCurrent ? '#e33' : '#38f',
+    renderTrackSvg(svgEl, locs, isCurrent ? '#e33' : '#009',
         isCurrent ? 'now' : (selection ? recordingDate(selection) : null));
 
     const idx     = completedIds.indexOf(selection);
@@ -202,7 +208,7 @@ function updateThumb(recordings, completedIds, selection) {
     if (nextBtn) nextBtn.disabled = idx >= completedIds.length - 1;
 }
 
-function bindPickerControls(recordingGroup, recordings, completedIds) {
+function bindPickerControls(recordings, completedIds) {
     const control   = document.getElementById('recording-picker-control');
     const prevBtn   = document.getElementById('recording-picker-prev');
     const nextBtn   = document.getElementById('recording-picker-next');
@@ -217,7 +223,7 @@ function bindPickerControls(recordingGroup, recordings, completedIds) {
         if (idx > 0) {
             activePickerSelection = completedIds[idx - 1];
             savePickerSelection(activePickerSelection, completedIds);
-            applyAndRender(recordingGroup, recordings, completedIds);
+            applyAndRender(recordings, completedIds);
             panToSelection(recordings, activePickerSelection);
         }
     };
@@ -229,7 +235,7 @@ function bindPickerControls(recordingGroup, recordings, completedIds) {
         if (idx < completedIds.length - 1) {
             activePickerSelection = completedIds[idx + 1];
             savePickerSelection(activePickerSelection, completedIds);
-            applyAndRender(recordingGroup, recordings, completedIds);
+            applyAndRender(recordings, completedIds);
             panToSelection(recordings, activePickerSelection);
         }
     };
@@ -248,7 +254,7 @@ function bindPickerControls(recordingGroup, recordings, completedIds) {
         control?.classList.remove('tooltip-open');
 
         if (on) {
-            drawRecordings(recordingGroup, recordings, lastRecordingTimestamp);
+            drawRecordings(recordings, lastRecordingTimestamp);
             const allLocs = completedIds.flatMap(id => recordings[id] || []);
             if (allLocs.length) {
                 window.map.fitBounds(
@@ -257,7 +263,7 @@ function bindPickerControls(recordingGroup, recordings, completedIds) {
                 );
             }
         } else {
-            applyPickerSelection(recordingGroup, recordings, activePickerSelection);
+            applyPickerSelection(recordings, activePickerSelection);
         }
     };
 
@@ -283,7 +289,12 @@ function panToSelection(recordings, selection) {
 
 if (window.Capacitor) {
     const BackgroundGeolocation = window.BackgroundGeolocation;
-    const {SplashScreen, Share} = window.Capacitor.Plugins;
+    const {SplashScreen, Share, App} = window.Capacitor.Plugins;
+
+    App.addListener('resume', async () => {
+        console.log('App has resumed');
+        if (isTracking || shareSecret) await startService();
+    });
 
     SplashScreen.hide();
     window.addEventListener('beforeunload', () => { SplashScreen.show(); });
@@ -331,7 +342,7 @@ if (window.Capacitor) {
             await BackgroundGeolocation.configure({
                 stationaryRadius: 0,
                 distanceFilter: 0,
-                desiredAccuracy: BackgroundGeolocation.MEDIUM_ACCURACY,
+                desiredAccuracy: BackgroundGeolocation.HIGH_ACCURACY,
                 debug: true,
                 notificationsEnabled: true,
                 notificationTitle: "Hitchmap",
@@ -340,9 +351,9 @@ if (window.Capacitor) {
                 startOnBoot: false,
                 startForeground: true,
                 locationProvider: BackgroundGeolocation.ACTIVITY_PROVIDER,
-                interval: 30000,
-                fastestInterval: 30000,
-                activitiesInterval: 30000,
+                interval: 5000,
+                fastestInterval: 5000,
+                activitiesInterval: 5000,
                 stopOnStillActivity: false,
                 url: `${location.origin}/location`,
                 syncUrl: `${location.origin}/location`,
@@ -357,6 +368,8 @@ if (window.Capacitor) {
                     speed:        "@speed",
                     // heading:      "@heading",
                     bearing:      "@bearing",
+                    activity: "@activity",
+                    activity_timestamp: "@activityTimestamp",
                     tracking:     isTracking,
                     recording_id: recordingId
                 }
@@ -412,7 +425,7 @@ if (window.Capacitor) {
     async function startSharing() {
         try {
             if (!shareSecret) {
-                const response = await fetch('/share-location', { method: 'POST', credentials: 'include' });
+                const response = await fetch('/share-location', { method: 'POST'});
                 const data     = await response.json();
                 if (data.success) shareSecret = data.location_share_secret;
             }
@@ -506,9 +519,9 @@ if (window.Capacitor) {
  *
  * Color scheme:
  *   - Current recording (recordingId)  → red (#e33)
- *   - All other (completed) recordings → blue (#38f)
+ *   - All other (completed) recordings → blue (#009)
  */
-export function drawRecordings(recordingGroup, recordings, lastTimestamp) {
+export function drawRecordings(recordings, lastTimestamp) {
     recordingGroup.clearLayers();
 
     if (!recordingGroup._backGroup) {
@@ -531,11 +544,11 @@ export function drawRecordings(recordingGroup, recordings, lastTimestamp) {
         const isCurrentRecording = recordingId === drawRecordingId;
         const trackColor    = isCurrentRecording ? '#e33' : '#38f';
         const baseOpacity   = isCurrentRecording ? 0.7 : 0.3;
-        const markerOpacity = isCurrentRecording ? 1 : 0.9;
+        const markerOpacity = 1;
 
         const recordingLayers = [];
 
-        const stops = locations.filter(loc => loc.seconds_spent > 300);
+        const stops = locations.filter(loc => loc.seconds_spent > 30);
 
         function resetRecording() {
             recordingLayers.forEach(({ layer, type }) => {
@@ -580,16 +593,25 @@ export function drawRecordings(recordingGroup, recordings, lastTimestamp) {
 
         const latLngs = locations.map(loc => [loc.latitude, loc.longitude]);
         const pl = L.polyline(latLngs, {
-            weight: 10,
+            weight: 3,
             opacity: 0,
             fillOpacity: 0,
         });
 
         pl.bindPopup((layer) => {
+            const anchor = layer.getPopup()?.getLatLng();
+            const loc    = anchor ? findClosestLocation(locations, anchor) : null;
+
             const container = L.DomUtil.create('div');
             container.innerHTML = `
+                ${loc ? `
+                    ${new Date(loc.timestamp).toLocaleString()}<br>
+                    Accuracy: ${loc.accuracy}m<br>
+                    Speed: ${loc.speed}m<br>
+                    ${loc.latitude.toFixed(6)}, ${loc.longitude.toFixed(6)}<br>
+                ` : ''}
                 Stops: ${stops.length}<br>
-                <button class="delete-recording-btn" style="margin-top:6px;color:white;background:#e53e3e;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;">Delete</button>
+                <button class="delete-recording-btn" style="margin-top:6px;color:white;background:#e53e3e;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;">Delete recording</button>
                 <button class="add-review-btn" style="margin-top:6px;color:white;background:#38a169;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;">Add review</button>
             `;
             container.querySelector('.delete-recording-btn').addEventListener('click', () => {
@@ -625,27 +647,27 @@ export function drawRecordings(recordingGroup, recordings, lastTimestamp) {
         stops.forEach((loc, index) => {
             const radius        = 5;
             const isSinglePoint = locations.length === 1;
+            const latlng        = [loc.latitude, loc.longitude];
 
-            const cmBack = L.circleMarker(latLngs[index], {
+            const cm = L.circleMarker(latlng, {
                 radius,
                 fillColor: trackColor,
                 fillOpacity: markerOpacity,
                 color: isCurrentRecording ? trackColor : 'white',
-                weight: 1,
-                interactive: false,
-                pane: 'user-recordings',
-            });
-            cmBack.addTo(backGroup);
-            recordingLayers.push({ layer: cmBack, type: 'circleMarker' });
-
-            const cm = L.circleMarker(latLngs[index], {
-                radius,
-                fillColor: trackColor,
-                fillOpacity: 0,
-                color: 'transparent',
-                weight: 1,
+                weight: 2,
                 interactive: true,
+                // pane: 'user-recordings',
             });
+            recordingLayers.push({ layer: cm, type: 'circleMarker' });
+
+            // const cm = L.circleMarker(latlng, {
+            //     radius,
+            //     fillColor: trackColor,
+            //     fillOpacity: 0,
+            //     color: 'transparent',
+            //     weight: 1,
+            //     interactive: true,
+            // });
 
             cm.bindPopup(() => {
                 const container = L.DomUtil.create('div');
@@ -653,8 +675,10 @@ export function drawRecordings(recordingGroup, recordings, lastTimestamp) {
                     Stop ${index + 1} of ${stops.length}<br>
                     Arrival: ${loc.timestamp ? new Date(loc.timestamp).toLocaleString() : 'N/A'}<br>
                     Time spent: ${Math.ceil(loc.seconds_spent/60)} min<br>
+                    Accuracy: ${loc.accuracy}m<br>
+                    Speed: ${loc.speed}m<br>
                     ${loc.latitude.toFixed(6)}, ${loc.longitude.toFixed(6)}<br>
-                    ${isSinglePoint ? `<button class="delete-recording-btn" style="margin-top:6px;color:white;background:#e53e3e;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;">Delete</button>` : ''}
+                    ${isSinglePoint ? `<button class="delete-recording-btn" style="margin-top:6px;color:white;background:#e53e3e;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;">Delete recording</button>` : ''}
                     <button class="add-review-btn" style="margin-top:6px;color:white;background:#38a169;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;">Add review</button>
                 `;
                 if (isSinglePoint) {
@@ -672,24 +696,32 @@ export function drawRecordings(recordingGroup, recordings, lastTimestamp) {
             });
 
             cm.on('popupopen', () => {
-                cmBack.setStyle({ fillColor: 'red', color: 'red', fillOpacity: 0.9 });
+                cm.setStyle({ fillColor: 'red', color: 'red', fillOpacity: 0.9 });
                 recordingLayers.forEach(({ layer, type }) => {
-                    if (layer === cmBack) return;
+                    if (layer === cm) return;
                     if (type === 'polyline') layer.setStyle({ color: 'purple', opacity: 0.7 });
                     else                    layer.setStyle({ fillColor: 'purple', color: 'purple', fillOpacity: 0.7 });
                 });
             });
 
             cm.on('popupclose', () => {
-                cmBack.setStyle({ fillColor: trackColor, color: isCurrentRecording ? trackColor : 'white', fillOpacity: markerOpacity });
+                cm.setStyle({ fillColor: trackColor, color: isCurrentRecording ? trackColor : 'white', fillOpacity: markerOpacity });
                 resetRecording();
             });
 
             cm.addTo(recordingGroup);
 
-            if (hitchmapBackground) {
-                cmBack.bringToBack();
-                cm.bringToBack();
+            cm.bringToFront();
+
+            let closest = closestMarker(window.allMarkers, loc.latitude, loc.longitude);
+
+            console.log(loc)
+
+            if (closest.getLatLng().distanceTo(latlng) < 10 || (loc.convex_hull && polygonDistanceToLatLng(L.polygon(loc.convex_hull), closest.getLatLng()) < 0.0001)) {
+                closest.setStyle({fillOpacity: 1, fillColor: '#38f', color: 'white', weight: 2})
+                cm.setStyle({fillOpacity: 0.5})
+                // TODO: move user dot along with the marker
+                setTimeout(_ => closest.bringToFront(), 0);
             }
         });
 
@@ -755,12 +787,12 @@ export function lastCoordinate(recordings) {
     };
 }
 
-function applyPickerSelection(recordingGroup, recordings, selection) {
+function applyPickerSelection(recordings, selection) {
     if (!recordings) return;
 
     const filtered = {};
     if (selection && recordings[selection])     filtered[selection]   = recordings[selection];
     if (recordingId && recordings[recordingId]) filtered[recordingId] = recordings[recordingId];
 
-    drawRecordings(recordingGroup, filtered, lastRecordingTimestamp);
+    drawRecordings(filtered, lastRecordingTimestamp);
 }

@@ -9,7 +9,7 @@ import requests
 from flask import request, send_file, send_from_directory, jsonify, redirect
 from flask_security import current_user
 
-from backend.shared import app, db, root_dir, dist_dir, static_dir, EMAIL, logger
+from backend.shared import app, db, root_dir, dist_dir, static_dir, EMAIL, logger, short_id_to_long_id
 from backend.user import init_security, security
 import backend.locations
 
@@ -134,7 +134,7 @@ def experience():
 
 @app.route("/original-comment/<short_id>")
 def original(short_id):
-    pid = int.from_bytes(base64.urlsafe_b64decode(short_id), byteorder="big", signed=False)
+    pid = short_id_to_long_id(short_id)
     print(pid)
     with db.engine.connect() as conn:
         comment = pd.read_sql("select comment from points where id = ?", db.engine, params=(pid,)).iloc[0, 0]

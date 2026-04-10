@@ -11,6 +11,30 @@ export function bar(selector) {
         $$(selector).classList.add('visible')
 }
 
+export function polygonDistanceToLatLng(polygon, latlng) {
+    const pts = polygon.getLatLngs()[0].map(ll => [ll.lat, ll.lng]);
+    const p = [latlng.lat, latlng.lng];
+
+    // Ray casting: check if point is inside
+    let inside = false;
+    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+        const [xi, yi] = pts[i], [xj, yj] = pts[j];
+        if ((yi > p[1]) !== (yj > p[1]) && p[0] < (xj - xi) * (p[1] - yi) / (yj - yi) + xi)
+            inside = !inside;
+    }
+    if (inside) return 0;
+
+    // Min distance to any edge
+    let min = Infinity;
+    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+        const [ax, ay] = pts[j], [bx, by] = pts[i];
+        const [dx, dy] = [bx - ax, by - ay];
+        const t = Math.max(0, Math.min(1, ((p[0]-ax)*dx + (p[1]-ay)*dy) / (dx*dx + dy*dy) || 0));
+        min = Math.min(min, Math.hypot(p[0] - ax - t*dx, p[1] - ay - t*dy));
+    }
+    return min;
+}
+
 export function arrowLine(from, to) {
     return L.polylineDecorator([from, to], {
         patterns: [
@@ -86,9 +110,27 @@ export function summaryText(row) {
 }
 
 export function closestMarker(markers, lat, lon) {
-    let latlng = L.latLng(lat, lon)
-    if (markers.length)
-        return markers.sort((a, b) => a.getLatLng().distanceTo(latlng) - b.getLatLng().distanceTo(latlng))[0]
+    return markers
+        .map(marker => {
+            const mll = marker.getLatLng();
+            const dx = mll.lng - lon;
+            const dy = mll.lat - lat;
+            return { marker, dist: dx * dx + dy * dy };
+        })
+        .reduce((a, b) => a.dist < b.dist ? a : b)
+        .marker;
+}
+
+export function findClosestLocation(locs, latlng) {
+    if (!locs || locs.length === 0) return null;
+    let best = null, bestDist = Infinity;
+    for (const loc of locs) {
+        const dlat = loc.latitude  - latlng.lat;
+        const dlng = loc.longitude - latlng.lng;
+        const d = dlat * dlat + dlng * dlng;
+        if (d < bestDist) { bestDist = d; best = loc; }
+    }
+    return best;
 }
 
 export function findClosestPolyline(point, polylines) {
@@ -235,3 +277,36 @@ const OutlinedPolyline = L.Polyline.extend({
 export function outlinedPolyline (latlngs, options) {
     return new OutlinedPolyline(latlngs, options);
 };
+
+export function addOutlineRing(marker, outlineColor = '#000', outlineWidth = 3) {
+    marker._updatePath = function () {
+        const renderer = this._renderer;
+        if (!renderer || !renderer._ctx) return;
+
+        const ctx = renderer._ctx;
+        const originalColor  = this.options.color;
+        const originalWeight = this.options.weight;
+        const originalFill   = this.options.fill;
+
+        // --- Draw outer ring ---
+        this.options.color  = outlineColor;
+        this.options.weight = (originalWeight || 3) + outlineWidth * 2;
+        this.options.fill   = false;           // ring only, no fill bleed
+        renderer._updateCircle(this);
+
+        // --- Restore & draw normal marker on top ---
+        this.options.color  = originalColor;
+        this.options.weight = originalWeight;
+        this.options.fill   = originalFill;
+        renderer._updateCircle(this);
+    };
+
+    // Force a redraw so the patch takes effect immediately
+    marker.redraw();
+}
+
+export function removeOutlineRing(marker) {
+    delete marker._updatePath;   // fall back to prototype
+    marker.redraw();
+    return marker;
+}

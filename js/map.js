@@ -1,17 +1,18 @@
 import {addGeocoder} from './geocoder'
 import {exportAsGPX} from './export-gpx';
 import {$$, bar, bars, arrowLine, C, addAsLeafletControl, clearCacheExceptErrorPage} from './utils';
-import {clearParams, applyParams, sharedRecordingGroup, removeFilterButtons} from './filters';
+import {clearParams, applyParams, removeFilterButtons} from './filters';
 import {restoreView, storageAvailable, summaryText, closestMarker, findClosestPolyline} from './utils';
 import {fetchCurrentUser, currentUser, firstUserPromise, userMarkerGroup, createUserMarkers} from './user';
 import {pendingGroup, updatePendingMarkers, addPending, getFuturePending} from './pending';
 import {renderReviews} from './render-reviews';
 import {maybeAddNetworkButton} from './network-button';
-import {drawRecordings, initializeUserLocationDisplay, initRecordingPicker} from './recordings';
+import {drawRecordings, initializeUserLocationDisplay, initRecordingPicker, recordingGroup} from './recordings';
 
 // Register service worker for offline functionality
 if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("/sw.js").catch(e => console.error(e));
+    const swURL = window.Capacitor ? "/sw.js?capacitor=1" : "/sw.js"
+    navigator.serviceWorker.register(swURL).catch(e => console.error(e));
 }
 
 // Exported variables appear on window.hitch
@@ -80,8 +81,7 @@ export var map = L.map(
 );
 window.map = map
 
-if (window.Capacitor)
-    initializeUserLocationDisplay()
+initializeUserLocationDisplay()
 
 map.on('dragstart', () => {
     document.body.dataset.centeringMode = null;
@@ -146,17 +146,14 @@ for (let row of window.markerData) {
     allMarkers.push(marker)
 }
 
-let userRecordingsGroup = L.layerGroup([], {hitchmapBackground: true}).addTo(map);
-
 firstUserPromise.then(user => {
     if(!user) return;
     createUserMarkers();
     window.userRecordings = user.recordings;
-    drawRecordings(userRecordingsGroup, user.recordings, user.last_location_timestamp)
     document.querySelector('#account-control a').innerText = '👤 ' + user.username;
     document.body.classList.toggle('has-recordings', user.last_location_timestamp);
     // Initialize recording picker after recordings are loaded
-    initRecordingPicker(userRecordingsGroup, user.recordings);
+    initRecordingPicker(user.recordings, user.last_location_timestamp);
 })
 
 setInterval(async () => {
@@ -164,17 +161,15 @@ setInterval(async () => {
     if (!user) return;
     createUserMarkers();
     window.userRecordings = user.recordings;
-    drawRecordings(userRecordingsGroup, user.recordings, user.last_location_timestamp);
     document.querySelector('#account-control a').innerText = '👤 ' + user.username;
     document.body.classList.toggle('has-locations', user.last_location_timestamp);
     // Re-initialize picker on refresh
-    initRecordingPicker(userRecordingsGroup, user.recordings);
+    initRecordingPicker(user.recordings, user.last_location_timestamp);
 }, 60000)
 
 let allMarkerGroup = L.layerGroup(allMarkers)
 allMarkerGroup.addTo(map)
 userMarkerGroup.addTo(map)
-sharedRecordingGroup.addTo(map)
 
 updatePendingMarkers()
 pendingGroup.addTo(map)
@@ -455,7 +450,8 @@ function initializeSpotForm(points, destinationProvided) {
         $$('#time-spent-display').textContent = totalMin;
 
         // Prefill wait time
-        waitInput.value = prefillWait;
+        if (prefillWait > 1)
+            waitInput.value = prefillWait;
 
         // Show/hide break buttons based on total time >= 16 min
         form_el.classList.toggle('prefill-long', totalMin >= 16);
@@ -522,13 +518,13 @@ map.on('click', e => {
 
     if (!document.body.classList.contains('zoomed-out') && (isModernTap || window.innerWidth < 780)) {
         var layerPoint = map.latLngToLayerPoint(e.latlng)
-        let markers = document.body.classList.contains('filtering') ? filterMarkerGroup.getLayers() : allMarkers
+        let markers = allMarkers
         var closest = closestMarker(markers, e.latlng.lat, e.latlng.lng)
         if (closest && map.latLngToLayerPoint(closest.getLatLng()).distanceTo(layerPoint) < 20) {
             opened = true
             closest.fire('click', e)
         } else {
-            let userPolylines = userRecordingsGroup.getLayers().filter(e => e.getLatLngs && e.options.interactive !== false)
+            let userPolylines = recordingGroup.getLayers().filter(e => e.getLatLngs && e.options.interactive !== false)
             let res = findClosestPolyline(e.latlng, userPolylines)
             if (map.latLngToLayerPoint(res.point).distanceTo(layerPoint) < 20) {
                 opened = true

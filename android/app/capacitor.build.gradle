@@ -17,7 +17,7 @@ dependencies {
     implementation "androidx.core:core:1.1.0"
     implementation "androidx.appcompat:appcompat:1.1.0"
 }
-apply from: "../../node_modules/cordova-background-geolocation-plugin/android/dependencies.gradle"
+apply from: "../../../cordova-background-geolocation-plugin/android/dependencies.gradle"
 
 if (hasProperty('postBuildExtras')) {
   postBuildExtras()

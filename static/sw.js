@@ -45,52 +45,28 @@ async function handleFetch(event) {
     const isExternal = new URL(request.url).hostname !== self.location.hostname;
 
     // Check if Capacitor is defined and if this is the homepage
-    const isCapacitor = typeof Capacitor !== 'undefined';
+    const isCapacitor = self.location.href.includes('capacitor=1');
     const isHomepage = strippedUrl === stripQuery(self.location.origin + '/');
 
     // Special handling for homepage in Capacitor
     if (isCapacitor && isHomepage) {
         const cachedResponse = await cache.match(strippedUrl);
         if (cachedResponse) {
-            const responseTime = cachedResponse.headers.get('sw-response-time');
-            // If no sw-response-time header, go network-first
-            if (!responseTime) {
-                try {
-                    const fetchedResponse = await fetch(request);
-                    event.waitUntil(cache.put(strippedUrl, fetchedResponse.clone()));
-                    return fetchedResponse;
-                } catch (error) {
-                    return cachedResponse;
-                }
-            }
-            // Check if cached response is older than 6 hours
-            const cacheAge = Date.now() - parseInt(responseTime);
-            const sixHours = 6 * 60 * 60 * 1000;
-            if (cacheAge > sixHours) {
-                // Cached response is stale, fetch fresh
-                try {
-                    const fetchedResponse = await fetch(request);
-                    event.waitUntil(cache.put(strippedUrl, fetchedResponse.clone()));
-                    return fetchedResponse;
-                } catch (error) {
-                    return cachedResponse;
-                }
-            }
-            // Cache is fresh, return it
-            return cachedResponse;
+            const dateHeader = cachedResponse.headers.get('Date');
+            const cacheAge = dateHeader ? Date.now() - new Date(dateHeader).getTime() : Infinity;
+            if (cacheAge <= 24 * 7 * 60 * 60 * 1000) return cachedResponse;
         }
-        // No cache, fetch from network
         try {
             const fetchedResponse = await fetch(request);
             event.waitUntil(cache.put(strippedUrl, fetchedResponse.clone()));
             return fetchedResponse;
         } catch (error) {
-            // Both network and cache missed — show error page
+            if (cachedResponse) return cachedResponse;
             const errorResponse = await cache.match('/error.html');
             if (errorResponse) return errorResponse;
             throw error;
         }
-    }
+}
 
     if (isExternal) {
         // Cache-first for external domains
