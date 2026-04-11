@@ -106,14 +106,15 @@ def merge_soliciting_events(
     df,
     # "Fast burst" detector
     fast_window=3,
-    fast_speed_kmh=8.0,  # p50 must exceed this
-    fast_consistency_kmh=4.0,  # p10 must exceed this
-    fast_linearity=0.6,  # crow-flies / avg-speed ratio must exceed this
+    fast_speed_kmh=10.0,
+    fast_consistency_kmh=8.0,
+    fast_linearity=0.6,
     # "Steady walk" detector
     walk_window=60,
     walk_median_kmh=4.0,
     walk_floor_kmh=1.5,
-    # Grace period: how many consecutive not-moving samples before soliciting
+    walk_linearity=0.3,  # lower than fast — walking naturally meanders more
+    # Grace period
     grace_samples=30,
 ):
     df = df.sort_values("timestamp").copy().reset_index(drop=True)
@@ -137,41 +138,70 @@ def merge_soliciting_events(
     lons = df["longitude"].to_numpy()
     ts = df["timestamp"].to_numpy()
 
-    # --- Detector 1: fast burst (directional) ---
-    # For each window ending at `end`, compute:
-    #   - p50 and p10 of per-sample speeds  (noise-robust speed check)
-    #   - linearity = crow-flies speed / mean per-sample speed  (direction check)
+    n = len(df)
+
+    def vectorized_linearity(window):
+        """
+        For each index `end`, compute:
+            crow_flies_kmh(start, end) / mean_speed(start..end)
+        where start = end - window + 1.
+
+        crow_flies uses haversine between lats[start]/lons[start] and lats[end]/lons[end].
+        mean_speed is the rolling mean of per-sample speeds over the same window.
+        """
+        # Indices of the window-start sample for each position
+        end_idx = np.arange(n)
+        start_idx = end_idx - window + 1
+
+        # Window duration in hours (end sample minus start sample)
+        dt_window_h = (ts[end_idx] - ts[np.maximum(start_idx, 0)]) / 3_600_000
+
+        # Haversine between window-start and window-end, vectorized
+        lat1_r = np.radians(lats[np.maximum(start_idx, 0)])
+        lon1_r = np.radians(lons[np.maximum(start_idx, 0)])
+        lat2_r = np.radians(lats[end_idx])
+        lon2_r = np.radians(lons[end_idx])
+        dlat_w = lat2_r - lat1_r
+        dlon_w = lon2_r - lon1_r
+        a_w = np.sin(dlat_w / 2) ** 2 + np.cos(lat1_r) * np.cos(lat2_r) * np.sin(dlon_w / 2) ** 2
+        crow_flies_m = 2 * EARTH_RADIUS_M * np.arctan2(np.sqrt(a_w), np.sqrt(1 - a_w))
+        crow_flies_kmh = (crow_flies_m / 1000) / np.where(dt_window_h > 0, dt_window_h, np.nan)
+
+        mean_speed = spd.rolling(window=window, min_periods=window).mean().to_numpy()
+
+        safe_mean_speed = np.where(mean_speed > 0, mean_speed, np.nan)
+        lin = crow_flies_kmh / safe_mean_speed
+        # Mask out the first (window-1) positions where the window isn't full yet
+        lin[: window - 1] = np.nan
+        return lin
+
+    # --- Detector 1: fast burst ---
     fast_p50 = spd.rolling(window=fast_window, min_periods=fast_window).quantile(0.50)
     fast_p10 = spd.rolling(window=fast_window, min_periods=fast_window).quantile(0.10)
-
-    n = len(df)
-    linearity = np.full(n, np.nan)
-    for end in range(fast_window - 1, n):
-        start = end - fast_window + 1
-        dt_window_h = (ts[end] - ts[start]) / 3_600_000
-        if dt_window_h <= 0:
-            continue
-        crow_flies_kmh = 1000 * haversine_m(lats[start], lons[start], lats[end], lons[end]) / dt_window_h
-        mean_speed = spd.iloc[start : end + 1].mean()
-        if mean_speed > 0:
-            linearity[end] = crow_flies_kmh / mean_speed
+    fast_lin = vectorized_linearity(fast_window)
 
     fast_mask = (
-        (fast_p50 >= fast_speed_kmh).to_numpy() & (fast_p10 >= fast_consistency_kmh).to_numpy() & (linearity >= fast_linearity)
+        (fast_p50 >= fast_speed_kmh).to_numpy() & (fast_p10 >= fast_consistency_kmh).to_numpy() & (fast_lin >= fast_linearity)
     )
 
-    # --- Detector 2: steady walk (no direction requirement — walking meanders) ---
+    # --- Detector 2: steady walk ---
     walk_roll = spd.rolling(window=walk_window, min_periods=walk_window)
-    walk_mask = ((walk_roll.quantile(0.50) >= walk_median_kmh) & (walk_roll.quantile(0.10) >= walk_floor_kmh)).to_numpy()
+    walk_lin = vectorized_linearity(walk_window)
 
-    # --- Expand each window back to all samples it covers ---
+    walk_mask = (
+        (walk_roll.quantile(0.50) >= walk_median_kmh).to_numpy()
+        & (walk_roll.quantile(0.10) >= walk_floor_kmh).to_numpy()
+        & ((walk_lin >= walk_linearity) | np.isnan(walk_lin))
+    )
+
+    # --- Expand windows back to all covered samples ---
     definitely_moving = np.zeros(n, dtype=bool)
     for end in np.where(fast_mask)[0]:
         definitely_moving[max(0, end - fast_window + 1) : end + 1] = True
     for end in np.where(walk_mask)[0]:
         definitely_moving[max(0, end - walk_window + 1) : end + 1] = True
 
-    # --- Grace period: only flip to soliciting after N consecutive not-moving samples ---
+    # --- Grace period ---
     hitchhiking = np.zeros(n, dtype=bool)
     not_moving_streak = 0
     for i in range(n):
@@ -183,6 +213,7 @@ def merge_soliciting_events(
             hitchhiking[i] = not_moving_streak >= grace_samples
 
     df["hitchhiking"] = hitchhiking
+    df["walk_lin"] = np.nan_to_num(walk_lin)
 
     # --- Merge contiguous hitchhiking rows into periods ---
     def convex_hull_coords(lats, lons):
@@ -196,7 +227,6 @@ def merge_soliciting_events(
         except Exception:
             return None
 
-    # df["hitch_group"] = (True | ~df["hitchhiking"] | ~df["hitchhiking"].shift(1, fill_value=False)).cumsum()
     df["hitch_group"] = (~df["hitchhiking"] | ~df["hitchhiking"].shift(1, fill_value=False)).cumsum()
     periods = df.groupby("hitch_group", as_index=False).agg(
         latitude=("latitude", "median"),
@@ -205,6 +235,7 @@ def merge_soliciting_events(
         timestamp=("timestamp", "min"),
         ts_max=("timestamp", "max"),
         speed=("speed_kmh", "median"),
+        walk_lin=("walk_lin", "median"),
         convex_hull=(
             "latitude",
             lambda s: convex_hull_coords(s.values, df.loc[s.index, "longitude"].values),
