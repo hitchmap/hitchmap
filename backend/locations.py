@@ -1,7 +1,6 @@
-import hashlib
 import json
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime
 from flask import jsonify, request, make_response
 from flask_security import current_user, login_required
 from sqlalchemy import text
@@ -41,22 +40,6 @@ class RecordingStop(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     recording_id = db.Column(db.String(255), nullable=False, unique=True, index=True)
     user_submitted = db.Column(db.Boolean, nullable=False)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-
-
-class CachedRecording(db.Model):
-    """
-    Pre-computed result of process_recording() for a completed recording.
-    Only written when the computed result differs from the stored one.
-    """
-
-    __tablename__ = "cached_recordings"
-
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
-    recording_id = db.Column(db.String(255), nullable=False, unique=True, index=True)
-    data = db.Column(db.Text, nullable=False)  # JSON string
-    data_hash = db.Column(db.String(64), nullable=False)  # SHA-256 of data
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
 
@@ -151,53 +134,33 @@ def get_recording(recording_id):
             "completed": true | false,
             "locations": [ ... ]
         }
-
-    Uses ETag for conditional GET support (If-None-Match).
-    Prefers the cache; falls back to live computation.
     """
     stop = RecordingStop.query.filter_by(recording_id=recording_id).first()
-
     completed = stop is not None
 
-    cached = CachedRecording.query.filter_by(recording_id=recording_id, user_id=current_user.id).first()
+    query = """
+        SELECT * FROM user_locations
+        WHERE recording_id = :recording_id and user_id = :user_id
+        ORDER BY timestamp
+    """
+    with db.engine.connect() as conn:
+        df = pd.read_sql(query, con=conn, params={"recording_id": recording_id, "user_id": current_user.id})
+        if df.empty:
+            return None
+        simplified = process_recording(df, conn)
 
-    if cached is not None:
-        records = json.loads(cached.data)
-    else:
-        # Live computation (recording not yet complete or cache missing)
-        query = """
-            SELECT * FROM user_locations
-            WHERE recording_id = :recording_id and user_id = :user_id
-            ORDER BY timestamp
-        """
-        with db.engine.connect() as conn:
-            df = pd.read_sql(query, con=conn, params={"recording_id": recording_id, "user_id": current_user.id})
-            if df.empty:
-                return None
-            simplified = process_recording(df, conn)
+        records = simplified.to_dict("records")
 
-            records = simplified.to_dict("records")
+        if not (len(simplified) > 1 or simplified["seconds_spent"].max() > 300):
+            records = []
 
-            if not (len(simplified) > 1 or simplified["seconds_spent"].max() > 300):
-                records = []
-
-    response = make_response(
-        jsonify(
-            {
-                "recording_id": recording_id,
-                "completed": completed,
-                "locations": records,
-            }
-        )
+    return jsonify(
+        {
+            "recording_id": recording_id,
+            "completed": completed,
+            "locations": records,
+        }
     )
-
-    if cached is not None:
-        print("cache hit")
-        etag = cached.data_hash
-        response.set_etag(etag)
-        response.make_conditional(request)
-
-    return response
 
 
 @app.route("/latest-recording/<location_share_secret>", methods=["GET"])
@@ -266,13 +229,9 @@ def delete_recording(recording_id):
         ).rowcount
 
         if count > 0:
-            # Also clean up stop and cache rows
+            # Also clean up stop row
             db.session.execute(
                 text("DELETE FROM recording_stops WHERE recording_id = :rid"),
-                {"rid": recording_id},
-            )
-            db.session.execute(
-                text("DELETE FROM cached_recordings WHERE recording_id = :rid"),
                 {"rid": recording_id},
             )
 
