@@ -14,6 +14,36 @@ export let recordingGroup;
 let localRecordingGroup;
 let localRecordingGroupBack;
 
+// ─── Recording storage ────────────────────────────────────────────────────────
+// Keyed by recording ID; values are location arrays (populated on first need).
+let loadedRecordings = {};
+let knownRecordingIds = [];
+
+async function fetchRecording(id) {
+    if (loadedRecordings[id]) return loadedRecordings[id];
+    try {
+        const res = await fetch(`/recording/${encodeURIComponent(id)}`);
+        if (!res.ok) {
+            console.warn(`Failed to fetch recording ${id}: ${res.status}`);
+            return null;
+        }
+        const data = await res.json();
+        if (data.locations && data.locations.length > 0) {
+            loadedRecordings[id] = data;
+            return data;
+        }
+    } catch (e) {
+        console.error(`Error fetching recording ${id}:`, e);
+    }
+    return null;
+}
+
+async function ensureRecordingLoaded(id) {
+    if (!loadedRecordings[id]) {
+        await fetchRecording(id);
+    }
+    return loadedRecordings[id] ?? null;}
+
 // ─── Recording picker state ───────────────────────────────────────────────────
 const PICKER_STORAGE_KEY   = 'hitchmap_active_picker_selection';
 const SHOW_ALL_STORAGE_KEY = 'hitchmap_show_all_recordings';
@@ -153,25 +183,31 @@ function recordingDate(recId) {
 
 // ─── Recording picker (prev/next arrows + tooltip) ───────────────────────────
 
-export function initRecordingPicker(recordings, lastTimestamp) {
+/**
+ * Entry point called from main.js.
+ * Now accepts recording IDs instead of pre-fetched recording data.
+ * Lazily fetches individual recordings as the user navigates the picker.
+ */
+export async function initRecordingPicker(recordingIds, lastTimestamp) {
     if (lastTimestamp) lastRecordingTimestamp = lastTimestamp;
 
-    if (!recordings) return;
+    if (!recordingIds || recordingIds.length === 0) return;
 
-    const completedIds = Object.keys(recordings).filter(id => id !== recordingId);
+    knownRecordingIds = recordingIds;
+    const completedIds = recordingIds.filter(id => id !== recordingId);
 
     document.body.classList.toggle('has-multiple-recordings', completedIds.length >= 2);
 
     // Initialise selection once
     if (activePickerSelection === null) {
         const stored = loadPickerSelection();
-        activePickerSelection = (stored && recordings[stored])
+        activePickerSelection = (stored && completedIds.includes(stored))
             ? stored
             : (completedIds[completedIds.length - 1] ?? null);
     }
 
     // Clamp to a valid entry
-    if (activePickerSelection && !recordings[activePickerSelection]) {
+    if (activePickerSelection && !completedIds.includes(activePickerSelection)) {
         activePickerSelection = completedIds[completedIds.length - 1] ?? null;
     }
 
@@ -179,24 +215,25 @@ export function initRecordingPicker(recordings, lastTimestamp) {
     const showAll = loadShowAll();
     document.body.classList.toggle('showing-all-recordings', showAll);
 
-    applyAndRender(recordings, completedIds);
-    bindPickerControls(recordings, completedIds);
+    await applyAndRender(completedIds);
+    bindPickerControls(completedIds);
 }
 
-function applyAndRender(recordings, completedIds) {
+async function applyAndRender(completedIds) {
     if (loadShowAll()) {
-        drawRecordings(recordings, lastRecordingTimestamp);
+        await drawRecordingsForIds(completedIds);
     } else {
-        applyPickerSelection(recordings, activePickerSelection);
+        await applyPickerSelection(activePickerSelection);
     }
-    updateThumb(recordings, completedIds, activePickerSelection);
+    // Use whatever is already loaded for the thumb (non-blocking)
+    updateThumb(completedIds, activePickerSelection);
 }
 
-function updateThumb(recordings, completedIds, selection) {
+function updateThumb(completedIds, selection) {
     const svgEl = document.getElementById('recording-picker-thumb-svg');
     if (!svgEl) return;
 
-    const locs      = (selection && recordings[selection]) || [];
+    const locs      = (selection && loadedRecordings[selection]?.locations) || [];
     const isCurrent = selection === recordingId;
     renderTrackSvg(svgEl, locs, isCurrent ? '#e33' : '#009',
         isCurrent ? 'now' : (selection ? recordingDate(selection) : null));
@@ -208,7 +245,7 @@ function updateThumb(recordings, completedIds, selection) {
     if (nextBtn) nextBtn.disabled = idx >= completedIds.length - 1;
 }
 
-function bindPickerControls(recordings, completedIds) {
+function bindPickerControls(completedIds) {
     const control   = document.getElementById('recording-picker-control');
     const prevBtn   = document.getElementById('recording-picker-prev');
     const nextBtn   = document.getElementById('recording-picker-next');
@@ -216,46 +253,46 @@ function bindPickerControls(recordings, completedIds) {
     const tooltip   = document.getElementById('recording-thumb-tooltip');
     const showAllCb = document.getElementById('rtt-show-all-toggle');
 
-    prevBtn.onclick = (e) => {
+    prevBtn.onclick = async (e) => {
         L.DomEvent?.stopPropagation(e);
         control?.classList.remove('tooltip-open');
         const idx = completedIds.indexOf(activePickerSelection);
         if (idx > 0) {
             activePickerSelection = completedIds[idx - 1];
             savePickerSelection(activePickerSelection, completedIds);
-            applyAndRender(recordings, completedIds);
-            panToSelection(recordings, activePickerSelection);
+            await applyAndRender(completedIds);
+            await panToSelection(activePickerSelection);
         }
     };
 
-    nextBtn.onclick = (e) => {
+    nextBtn.onclick = async (e) => {
         L.DomEvent?.stopPropagation(e);
         control?.classList.remove('tooltip-open');
         const idx = completedIds.indexOf(activePickerSelection);
         if (idx < completedIds.length - 1) {
             activePickerSelection = completedIds[idx + 1];
             savePickerSelection(activePickerSelection, completedIds);
-            applyAndRender(recordings, completedIds);
-            panToSelection(recordings, activePickerSelection);
+            await applyAndRender(completedIds);
+            await panToSelection(activePickerSelection);
         }
     };
 
-    thumb.onclick = (e) => {
+    thumb.onclick = async (e) => {
         L.DomEvent?.stopPropagation(e);
-        panToSelection(recordings, activePickerSelection);
+        await panToSelection(activePickerSelection);
         if (showAllCb) showAllCb.checked = document.body.classList.contains('showing-all-recordings');
         control?.classList.toggle('tooltip-open');
     };
 
-    showAllCb.onchange = (e) => {
+    showAllCb.onchange = async (e) => {
         const on = e.target.checked;
         saveShowAll(on);
         document.body.classList.toggle('showing-all-recordings', on);
         control?.classList.remove('tooltip-open');
 
         if (on) {
-            drawRecordings(recordings, lastRecordingTimestamp);
-            const allLocs = completedIds.flatMap(id => recordings[id] || []);
+            await drawRecordingsForIds(completedIds);
+            const allLocs = completedIds.flatMap(id => loadedRecordings[id]?.locations || []);
             if (allLocs.length) {
                 window.map.fitBounds(
                     L.latLngBounds(allLocs.map(l => [l.latitude, l.longitude])),
@@ -263,7 +300,7 @@ function bindPickerControls(recordings, completedIds) {
                 );
             }
         } else {
-            applyPickerSelection(recordings, activePickerSelection);
+            await applyPickerSelection(activePickerSelection);
         }
     };
 
@@ -274,15 +311,28 @@ function bindPickerControls(recordings, completedIds) {
     document.addEventListener('click', () => control?.classList.remove('tooltip-open'));
 }
 
-function panToSelection(recordings, selection) {
-    const locs = (selection && recordings[selection]) || [];
-    if (!locs.length) return;
-    const latlngs = locs.map(l => [l.latitude, l.longitude]);
+async function panToSelection(selection) {
+    if (!selection) return;
+    const locs = await ensureRecordingLoaded(selection);
+    if (!locs?.locations?.length) return;
+    const latlngs = locs.locations.map(l => [l.latitude, l.longitude]);
     if (latlngs.length === 1) {
         window.map.setView(latlngs[0], 19, { animate: true });
     } else {
         window.map.fitBounds(L.latLngBounds(latlngs), { padding: [40, 40], animate: true });
     }
+}
+
+/**
+ * Fetch all given IDs in parallel, then draw them all.
+ */
+async function drawRecordingsForIds(ids) {
+    await Promise.all(ids.map(id => ensureRecordingLoaded(id)));
+    const recordingsMap = {};
+    for (const id of ids) {
+        if (loadedRecordings[id]?.locations) recordingsMap[id] = loadedRecordings[id].locations;
+    }
+    drawRecordings(recordingsMap, lastRecordingTimestamp);
 }
 
 // ─── Capacitor background geolocation ────────────────────────────────────────
@@ -576,6 +626,9 @@ export function drawRecordings(recordings, lastTimestamp) {
                         resetRecording();
                         recordingLayers.forEach(({ layer }) => layer.remove());
                         recordingLayers.length = 0;
+                        // Remove from local cache
+                        delete loadedRecordings[drawRecordingId];
+                        knownRecordingIds = knownRecordingIds.filter(id => id !== drawRecordingId);
                     } else {
                         alert(data.error || 'Failed to delete recording.');
                     }
@@ -770,12 +823,12 @@ function drawLocalRecordings() {
     localRecordingGroup.getLayers().forEach(l => l.bringToBack?.());
 }
 
-export function lastCoordinate(recordings) {
-    if (!recordings || Object.keys(recordings).length === 0) return null;
+export function lastCoordinate(recordingsMap) {
+    if (!recordingsMap || Object.keys(recordingsMap).length === 0) return null;
 
-    const recordingIds    = Object.keys(recordings);
+    const recordingIds    = Object.keys(recordingsMap);
     const lastRecordingId = recordingIds[recordingIds.length - 1];
-    const lastRecording   = recordings[lastRecordingId];
+    const lastRecording   = recordingsMap[lastRecordingId];
     if (!lastRecording || lastRecording.length === 0) return null;
 
     const lastLocation = lastRecording[lastRecording.length - 1];
@@ -786,12 +839,19 @@ export function lastCoordinate(recordings) {
     };
 }
 
-function applyPickerSelection(recordings, selection) {
-    if (!recordings) return;
-
+async function applyPickerSelection(selection) {
     const filtered = {};
-    if (selection && recordings[selection])     filtered[selection]   = recordings[selection];
-    if (recordingId && recordings[recordingId]) filtered[recordingId] = recordings[recordingId];
+
+    if (selection) {
+        const data = await ensureRecordingLoaded(selection);
+        if (data?.locations) filtered[selection] = data.locations;
+    }
+
+    // Always include the active (current) recording if present
+    if (recordingId) {
+        const data = await ensureRecordingLoaded(recordingId);
+        if (data?.locations) filtered[recordingId] = data.locations;
+    }
 
     drawRecordings(filtered, lastRecordingTimestamp);
 }

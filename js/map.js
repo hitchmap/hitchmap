@@ -149,22 +149,18 @@ for (let row of window.markerData) {
 firstUserPromise.then(user => {
     if(!user) return;
     createUserMarkers();
-    window.userRecordings = user.recordings;
     document.querySelector('#account-control a').innerText = '👤 ' + user.username;
     document.body.classList.toggle('has-recordings', user.last_location_timestamp);
-    // Initialize recording picker after recordings are loaded
-    initRecordingPicker(user.recordings, user.last_location_timestamp);
+    initRecordingPicker(user.recording_ids, user.last_location_timestamp);
 })
 
 setInterval(async () => {
     let user = await fetchCurrentUser();
     if (!user) return;
     createUserMarkers();
-    window.userRecordings = user.recordings;
     document.querySelector('#account-control a').innerText = '👤 ' + user.username;
     document.body.classList.toggle('has-locations', user.last_location_timestamp);
-    // Re-initialize picker on refresh
-    initRecordingPicker(user.recordings, user.last_location_timestamp);
+    initRecordingPicker(user.recording_ids, user.last_location_timestamp);
 }, 60000)
 
 let allMarkerGroup = L.layerGroup(allMarkers)
