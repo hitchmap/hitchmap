@@ -12,7 +12,7 @@ from wtforms import IntegerField, SelectField, StringField, SubmitField, Boolean
 from wtforms.validators import Optional
 from wtforms.widgets import NumberInput
 from sqlalchemy import text
-from backend.simplify_recording import simplify_recording
+from backend.process_recording import process_recording
 
 from wtforms import EmailField, ValidationError
 from flask_security import ForgotPasswordForm
@@ -188,48 +188,41 @@ def form():
 
 @app.route("/user", methods=["GET"])
 def get_user():
+    """
+    Returns user metadata and a list of recording IDs (no location data).
+    The client fetches each recording individually via /recording/<id>.
+    """
     if current_user.is_anonymous:
         return jsonify({"logged_in": False, "_permissions": []})
 
     permissions = list(set(perm for role in current_user.roles for perm in role.permissions))
 
-    query = """
-    SELECT * FROM user_locations WHERE user_id = :user_id ORDER BY recording_id, timestamp
-    """
+    rows = db.session.execute(
+        text("""
+            SELECT
+                recording_id,
+                MAX(timestamp) AS last_timestamp
+            FROM user_locations
+            WHERE user_id = :user_id
+            GROUP BY recording_id
+            ORDER BY MIN(timestamp)
+        """),
+        {"user_id": current_user.id},
+    ).fetchall()
 
-    locations = pd.read_sql(query, con=db.engine, params={"user_id": current_user.id})
+    recording_ids = [r.recording_id for r in rows]
+    last_location_timestamp = max((r.last_timestamp for r in rows), default=None)
 
-    if locations.empty:
-        return jsonify(
-            {
-                "logged_in": True,
-                "username": current_user.username,
-                "_permissions": permissions,
-                "recordings": {},
-                "location_share_secret": current_user.location_share_secret,
-                "last_location_timestamp": None,
-            }
-        )
-    else:
-        last_location_timestamp = locations.timestamp.max().item()
-
-        recordings = {}
-        for recording_id, group in locations.groupby("recording_id"):
-            simplified = simplify_recording(group)
-            # keep only if more than 1 point or a stop longer than 5 min
-            if len(simplified) > 1 or simplified["seconds_spent"].max() > 300:
-                recordings[recording_id] = simplified.to_dict("records")
-
-        return jsonify(
-            {
-                "logged_in": True,
-                "username": current_user.username,
-                "_permissions": permissions,
-                "recordings": recordings,
-                "location_share_secret": current_user.location_share_secret,
-                "last_location_timestamp": last_location_timestamp,
-            }
-        )
+    return jsonify(
+        {
+            "logged_in": True,
+            "username": current_user.username,
+            "_permissions": permissions,
+            "recording_ids": recording_ids,
+            "location_share_secret": current_user.location_share_secret,
+            "last_location_timestamp": last_location_timestamp,
+        }
+    )
 
 
 @app.route("/share-location", methods=["POST"])

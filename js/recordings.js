@@ -1,6 +1,6 @@
-import { firstUserPromise } from './user';
+import { firstUserPromise} from './user';
 import { UserLocationDisplay } from './user-location-display';
-import { outlinedPolyline, findClosestLocation, closestMarker, polygonDistanceToLatLng, addOutlineRing } from './utils';
+import { outlinedPolyline, findClosestLocation, closestMarker, polygonDistanceToLatLng, addOutlineRing, C } from './utils';
 
 let isTracking = false;
 let shareSecret;
@@ -333,7 +333,8 @@ if (window.Capacitor) {
 
     async function configure() {
         try {
-            if (await isServiceRunning()) {
+            // if tracking, keep using the same recordingId as before
+            if (await isServiceRunning() && isTracking) {
                 const oldConfig = await BackgroundGeolocation.getConfig();
                 recordingId = oldConfig.postTemplate.recording_id;
             }
@@ -418,6 +419,7 @@ if (window.Capacitor) {
     async function stopTracking() {
         isTracking = false;
         updateState();
+        recordingId = null;
         if (!shareSecret) await stopService();
         else              await configure();
     }
@@ -521,6 +523,10 @@ if (window.Capacitor) {
  *   - Current recording (recordingId)  → red (#e33)
  *   - All other (completed) recordings → blue (#009)
  */
+let recordingMarkers = [];
+
+const svgRenderer = L.svg();
+
 export function drawRecordings(recordings, lastTimestamp) {
     recordingGroup.clearLayers();
 
@@ -656,18 +662,10 @@ export function drawRecordings(recordings, lastTimestamp) {
                 color: isCurrentRecording ? trackColor : 'white',
                 weight: 2,
                 interactive: true,
+                renderer: svgRenderer
                 // pane: 'user-recordings',
             });
             recordingLayers.push({ layer: cm, type: 'circleMarker' });
-
-            // const cm = L.circleMarker(latlng, {
-            //     radius,
-            //     fillColor: trackColor,
-            //     fillOpacity: 0,
-            //     color: 'transparent',
-            //     weight: 1,
-            //     interactive: true,
-            // });
 
             cm.bindPopup(() => {
                 const container = L.DomUtil.create('div');
@@ -680,6 +678,7 @@ export function drawRecordings(recordings, lastTimestamp) {
                     ${loc.latitude.toFixed(6)}, ${loc.longitude.toFixed(6)}<br>
                     ${isSinglePoint ? `<button class="delete-recording-btn" style="margin-top:6px;color:white;background:#e53e3e;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;">Delete recording</button>` : ''}
                     <button class="add-review-btn" style="margin-top:6px;color:white;background:#38a169;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;">Add review</button>
+                ${JSON.stringify(loc)}
                 `;
                 if (isSinglePoint) {
                     container.querySelector('.delete-recording-btn').addEventListener('click', () => {
@@ -713,15 +712,15 @@ export function drawRecordings(recordings, lastTimestamp) {
 
             cm.bringToFront();
 
-            let closest = closestMarker(window.allMarkers, loc.latitude, loc.longitude);
-
-            console.log(loc)
-
-            if (closest.getLatLng().distanceTo(latlng) < 10 || (loc.convex_hull && polygonDistanceToLatLng(L.polygon(loc.convex_hull), closest.getLatLng()) < 0.0001)) {
-                closest.setStyle({fillOpacity: 1, fillColor: '#38f', color: 'white', weight: 2})
-                cm.setStyle({fillOpacity: 0.5})
-                // TODO: move user dot along with the marker
-                setTimeout(_ => closest.bringToFront(), 0);
+            if (loc.nearby_point) {
+                let closest = window.reviewData.find(review => review[C.SHORT_ID] === loc.nearby_point)?._marker;
+                if (closest) {
+                    closest.setStyle({fillOpacity: 1, fillColor: '#38f', color: 'white', weight: 2})
+                    closest._rec = {id: drawRecordingId, loc};
+                    cm.setStyle({fillOpacity: 0.5, opacity: 0.5, radius: 4})
+                    // TODO: move user dot along with the marker
+                    setTimeout(_ => closest.bringToFront(), 0);
+                }
             }
         });
 

@@ -1,9 +1,11 @@
+import hashlib
+import json
 import pandas as pd
-from datetime import datetime
-from flask import jsonify, request
+from datetime import datetime, timedelta
+from flask import jsonify, request, make_response
 from flask_security import current_user, login_required
 from sqlalchemy import text
-from backend.simplify_recording import simplify_recording
+from backend.process_recording import process_recording
 
 from backend.shared import app, db, logger
 
@@ -20,11 +22,42 @@ class UserLocation(db.Model):
     timestamp = db.Column(db.BigInteger, nullable=False)  # Unix timestamp in milliseconds
     speed = db.Column(db.Float, nullable=True)
     heading = db.Column(db.Float, nullable=True)
-    created_at = db.Column(db.DateTime, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=True)
 
     tracking = db.Column(db.Boolean, nullable=False)  # True for tracking, False for sharing only
 
     user = db.relationship("User", backref="locations")
+
+
+class RecordingStop(db.Model):
+    """
+    One row per recording that has been marked complete.
+    user_submitted=True  → the app explicitly posted /tracking-completed.
+    user_submitted=False → the nightly script inferred completion (no update for 3+ days).
+    """
+
+    __tablename__ = "recording_stops"
+
+    id = db.Column(db.Integer, primary_key=True)
+    recording_id = db.Column(db.String(255), nullable=False, unique=True, index=True)
+    user_submitted = db.Column(db.Boolean, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+
+class CachedRecording(db.Model):
+    """
+    Pre-computed result of process_recording() for a completed recording.
+    Only written when the computed result differs from the stored one.
+    """
+
+    __tablename__ = "cached_recordings"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    recording_id = db.Column(db.String(255), nullable=False, unique=True, index=True)
+    data = db.Column(db.Text, nullable=False)  # JSON string
+    data_hash = db.Column(db.String(64), nullable=False)  # SHA-256 of data
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
 
 with app.app_context():
@@ -37,40 +70,140 @@ with app.app_context():
     db.session.commit()
 
 
+# ---------------------------------------------------------------------------
+# Routes
+# ---------------------------------------------------------------------------
+
+
 @app.route("/location", methods=["POST"])
 @login_required
 def post_location():
     datalist = request.get_json() or []
     for data in datalist:
         print(data)
-        # Add server-side fields
         data["user_id"] = current_user.id
 
-        # replace if tracking = true due to the unique index
+        assert -90 <= data["lat"] <= 90
+        assert -180 <= data["lon"] <= 180
+        assert 1700000000000 < data["timestamp"] < 111700000000000
+        assert 0 <= accuracy <= 10000000
+        assert 0 <= speed <= 10000000
+        assert type(tracking) == bool
+
         sql = text("""
             INSERT OR REPLACE INTO user_locations (
                 user_id, recording_id, latitude, longitude,
-                accuracy, timestamp, speed, tracking, created_at,
-                activity, activity_timestamp
+                accuracy, timestamp, speed, tracking, created_at
             )
             VALUES (
                 :user_id, :recording_id, :latitude, :longitude,
-                :accuracy, :timestamp, :speed, :tracking, CURRENT_TIMESTAMP,
-                :activity, :activity_timestamp
+                :accuracy, :timestamp, :speed, :tracking, CURRENT_TIMESTAMP
             )
         """)
 
         db.session.execute(sql, data)
         db.session.commit()
 
-        return jsonify({"success": True}), 201
+    return jsonify({"success": True}), 201
+
+
+@app.route("/tracking-completed", methods=["POST"])
+@login_required
+def tracking_completed():
+    """
+    Called by the app when the user explicitly stops tracking.
+    Upserts a RecordingStop row with user_submitted=True.
+    """
+    data = request.get_json() or {}
+    recording_id = data.get("recording_id")
+    if not recording_id:
+        return jsonify({"error": "recording_id required"}), 400
+
+    # Verify the recording belongs to the current user
+    exists = db.session.execute(
+        text("SELECT 1 FROM user_locations WHERE recording_id = :rid AND user_id = :uid LIMIT 1"),
+        {"rid": recording_id, "uid": current_user.id},
+    ).fetchone()
+    if not exists:
+        return jsonify({"error": "Recording not found"}), 404
+
+    existing = RecordingStop.query.filter_by(recording_id=recording_id).first()
+    if existing is None:
+        db.session.add(RecordingStop(recording_id=recording_id, user_submitted=True))
+        db.session.commit()
+    elif not existing.user_submitted:
+        # Upgrade inferred stop to user-submitted
+        existing.user_submitted = True
+        db.session.commit()
+
+    return jsonify({"success": True}), 200
+
+
+@app.route("/recording/<recording_id>", methods=["GET"])
+@login_required
+def get_recording(recording_id):
+    """
+    Returns the processed recording data for a single recording.
+
+    Response body:
+        {
+            "recording_id": "...",
+            "completed": true | false,
+            "locations": [ ... ]
+        }
+
+    Uses ETag for conditional GET support (If-None-Match).
+    Prefers the cache; falls back to live computation.
+    """
+    stop = RecordingStop.query.filter_by(recording_id=recording_id).first()
+
+    completed = stop is not None
+
+    cached = CachedRecording.query.filter_by(recording_id=recording_id, user_id=current_user.id).first()
+
+    if cached is not None:
+        records = json.loads(cached.data)
+    else:
+        # Live computation (recording not yet complete or cache missing)
+        query = """
+            SELECT * FROM user_locations
+            WHERE recording_id = :recording_id and user_id = :user_id
+            ORDER BY timestamp
+        """
+        with db.engine.connect() as conn:
+            df = pd.read_sql(query, con=conn, params={"recording_id": recording_id, "user_id": current_user.id})
+            if df.empty:
+                return None
+            simplified = process_recording(df, conn)
+
+            records = simplified.to_dict("records")
+
+            if not (len(simplified) > 1 or simplified["seconds_spent"].max() > 300):
+                records = []
+
+    response = make_response(
+        jsonify(
+            {
+                "recording_id": recording_id,
+                "completed": completed,
+                "locations": records,
+            }
+        )
+    )
+
+    if cached is not None:
+        print("cache hit")
+        etag = cached.data_hash
+        response.set_etag(etag)
+        response.make_conditional(request)
+
+    return response
 
 
 @app.route("/latest-recording/<location_share_secret>", methods=["GET"])
 def get_latest_recording(location_share_secret):
     """Get the latest recording for a user via their location share secret"""
     try:
-        # Use CTE to capture the latest recording state atomically
         sql = """
             WITH latest_entry AS (
                 SELECT
@@ -94,21 +227,17 @@ def get_latest_recording(location_share_secret):
                     SELECT id FROM user WHERE location_share_secret = :secret
                 )
                 AND (
-                    -- If latest entry has tracking=false, only return that one row
                     (le.tracking = 0 AND ul.timestamp = le.timestamp)
-                    -- Otherwise return all rows with the recording_id
                     OR le.tracking = 1
                 )
             ORDER BY ul.timestamp ASC
         """
 
-        # Execute query and convert to DataFrame
         df = pd.read_sql(sql, db.session.connection(), params={"secret": location_share_secret})
 
         if df.empty:
             return jsonify({"error": "No recordings found for this user"}), 404
 
-        # Convert to list of dictionaries
         locations = df.to_dict(orient="records")
 
         return jsonify(
@@ -117,11 +246,9 @@ def get_latest_recording(location_share_secret):
                 "recording_id": locations[0]["recording_id"],
                 "username": locations[0]["username"],
                 "tracking": bool(locations[-1]["tracking"]),
-                "locations": simplify_locations(locations),
+                "locations": process_recording(locations),
             }
         ), 200
-
-        return jsonify({"success": True, "recording_id": locations[0]["recording_id"], "locations": locations}), 200
 
     except Exception as e:
         logger.error(f"Error fetching latest recording: {e}")
@@ -133,11 +260,21 @@ def get_latest_recording(location_share_secret):
 def delete_recording(recording_id):
     """Delete all locations for a specific recording"""
     try:
-        # Verify the recording belongs to the current user
         count = db.session.execute(
             text("DELETE FROM user_locations WHERE user_id = :user_id AND recording_id = :recording_id"),
             {"user_id": current_user.id, "recording_id": recording_id},
         ).rowcount
+
+        if count > 0:
+            # Also clean up stop and cache rows
+            db.session.execute(
+                text("DELETE FROM recording_stops WHERE recording_id = :rid"),
+                {"rid": recording_id},
+            )
+            db.session.execute(
+                text("DELETE FROM cached_recordings WHERE recording_id = :rid"),
+                {"rid": recording_id},
+            )
 
         db.session.commit()
 

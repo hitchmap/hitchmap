@@ -2,6 +2,10 @@ import numpy as np
 import pandas as pd
 from math import radians, cos, sin, sqrt, atan2
 from scipy.spatial import ConvexHull
+from shapely.geometry import Point, MultiPoint
+import shapely
+
+import base64
 
 EARTH_RADIUS_M = 6371000
 
@@ -102,6 +106,9 @@ def kalman_smooth_2d(df, process_var=1e-4, meas_var=1e-2):
     return df
 
 
+from scipy.ndimage import maximum_filter1d, binary_opening
+
+
 def merge_soliciting_events(
     df,
     # "Fast burst" detector
@@ -113,9 +120,9 @@ def merge_soliciting_events(
     walk_window=60,
     walk_median_kmh=4.0,
     walk_floor_kmh=1.5,
-    walk_linearity=0.3,  # lower than fast — walking naturally meanders more
-    # Grace period
-    grace_samples=30,
+    walk_linearity=0.3,
+    # Minimum soliciting period
+    min_soliciting_period=30,
 ):
     df = df.sort_values("timestamp").copy().reset_index(drop=True)
 
@@ -141,22 +148,11 @@ def merge_soliciting_events(
     n = len(df)
 
     def vectorized_linearity(window):
-        """
-        For each index `end`, compute:
-            crow_flies_kmh(start, end) / mean_speed(start..end)
-        where start = end - window + 1.
-
-        crow_flies uses haversine between lats[start]/lons[start] and lats[end]/lons[end].
-        mean_speed is the rolling mean of per-sample speeds over the same window.
-        """
-        # Indices of the window-start sample for each position
         end_idx = np.arange(n)
         start_idx = end_idx - window + 1
 
-        # Window duration in hours (end sample minus start sample)
         dt_window_h = (ts[end_idx] - ts[np.maximum(start_idx, 0)]) / 3_600_000
 
-        # Haversine between window-start and window-end, vectorized
         lat1_r = np.radians(lats[np.maximum(start_idx, 0)])
         lon1_r = np.radians(lons[np.maximum(start_idx, 0)])
         lat2_r = np.radians(lats[end_idx])
@@ -168,10 +164,8 @@ def merge_soliciting_events(
         crow_flies_kmh = (crow_flies_m / 1000) / np.where(dt_window_h > 0, dt_window_h, np.nan)
 
         mean_speed = spd.rolling(window=window, min_periods=window).mean().to_numpy()
-
         safe_mean_speed = np.where(mean_speed > 0, mean_speed, np.nan)
         lin = crow_flies_kmh / safe_mean_speed
-        # Mask out the first (window-1) positions where the window isn't full yet
         lin[: window - 1] = np.nan
         return lin
 
@@ -194,41 +188,42 @@ def merge_soliciting_events(
         & ((walk_lin >= walk_linearity) | np.isnan(walk_lin))
     )
 
-    # --- Expand windows back to all covered samples ---
-    definitely_moving = np.zeros(n, dtype=bool)
-    for end in np.where(fast_mask)[0]:
-        definitely_moving[max(0, end - fast_window + 1) : end + 1] = True
-    for end in np.where(walk_mask)[0]:
-        definitely_moving[max(0, end - walk_window + 1) : end + 1] = True
+    # --- Expand detector windows back to all covered samples via max-pooling ---
+    fast_expanded = maximum_filter1d(
+        fast_mask.astype(np.uint8),
+        size=fast_window,
+        origin=-(fast_window // 2),
+    ).astype(bool)
 
-    # --- Grace period ---
-    hitchhiking = np.zeros(n, dtype=bool)
-    not_moving_streak = 0
-    for i in range(n):
-        if definitely_moving[i]:
-            not_moving_streak = 0
-            hitchhiking[i] = False
-        else:
-            not_moving_streak += 1
-            hitchhiking[i] = not_moving_streak >= grace_samples
+    walk_expanded = maximum_filter1d(
+        walk_mask.astype(np.uint8),
+        size=walk_window,
+        origin=-(walk_window // 2),
+    ).astype(bool)
 
-    df["hitchhiking"] = hitchhiking
+    definitely_moving = fast_expanded | walk_expanded
+
+    # --- Soliciting = ~definitely_moving, with short runs scrubbed ---
+    # binary_opening erodes then dilates: any True run shorter than
+    # min_soliciting_period is removed; longer runs are restored intact.
+    structure = np.ones(min_soliciting_period, dtype=bool)
+    soliciting = binary_opening(~definitely_moving, structure=structure)
+
+    df["soliciting"] = soliciting
     df["walk_lin"] = np.nan_to_num(walk_lin)
 
-    # --- Merge contiguous hitchhiking rows into periods ---
+    # --- Merge contiguous soliciting rows into periods ---
     def convex_hull_coords(lats, lons):
-        pts = np.column_stack([lats, lons])
-        if len(pts) < 3:
+        pts = [(lon, lat) for lat, lon in zip(lats, lons)]
+        if len(pts) < 2:
             return None
         try:
-            hull = ConvexHull(pts)
-            vertices = pts[hull.vertices].tolist()
-            return vertices + [vertices[0]]
+            return MultiPoint(pts).convex_hull
         except Exception:
             return None
 
-    df["hitch_group"] = (~df["hitchhiking"] | ~df["hitchhiking"].shift(1, fill_value=False)).cumsum()
-    periods = df.groupby("hitch_group", as_index=False).agg(
+    df["hitchhike_group"] = (~df["soliciting"] | ~df["soliciting"].shift(1, fill_value=False)).cumsum()
+    periods = df.groupby("hitchhike_group", as_index=False).agg(
         latitude=("latitude", "median"),
         longitude=("longitude", "median"),
         accuracy=("accuracy", "median"),
@@ -242,14 +237,64 @@ def merge_soliciting_events(
         ),
     )
     periods["seconds_spent"] = ((periods["ts_max"] - periods["timestamp"]) / 1000).astype(int)
-    periods = periods.drop(columns=["hitch_group", "ts_max"])
+    periods = periods.drop(columns=["hitchhike_group", "ts_max"])
     return periods.reset_index(drop=True)
 
 
+def find_nearby_points(periods_df, db_con):
+    RADIUS_M = 10.0
+    PAD_M = 11.1
+    PAD_DEGREES = 0.0001
+
+    def point_near_hull(pt, hull):
+        if hull.contains(pt):
+            return True
+        nearest = hull.exterior.interpolate(hull.exterior.project(pt))
+        return haversine_m(pt.y, pt.x, nearest.y, nearest.x) <= PAD_M
+
+    def bbox(lat, lon, hull):
+        if hull is not None:
+            min_lon, min_lat, max_lon, max_lat = hull.bounds
+        else:
+            min_lat, max_lat, min_lon, max_lon = lat, lat, lon, lon
+        return min_lat - PAD_DEGREES, max_lat + PAD_DEGREES, min_lon - PAD_DEGREES, max_lon + PAD_DEGREES
+
+    periods_df = periods_df.copy()
+    periods_df["nearby_point"] = None
+    for pos, (_, row) in enumerate(periods_df.iterrows()):
+        if row["seconds_spent"] == 0:
+            continue
+        lat, lon = row["latitude"], row["longitude"]
+        hull = row.get("convex_hull")
+        min_lat, max_lat, min_lon, max_lon = bbox(lat, lon, hull)
+        candidates = pd.read_sql(
+            "SELECT id, lat, lon FROM points"
+            " WHERE NOT banned AND revised_by IS NULL"
+            " AND lat BETWEEN :min_lat AND :max_lat"
+            " AND lon BETWEEN :min_lon AND :max_lon",
+            db_con,
+            params=dict(min_lat=min_lat, max_lat=max_lat, min_lon=min_lon, max_lon=max_lon),
+        )
+        # don't touch this
+        candidates["short_id"] = candidates["id"].apply(lambda x: base64.urlsafe_b64encode(x.to_bytes(8, "big")).decode("ascii"))
+        best_short_id = None
+        best_dist = float("inf")
+        for _, c in candidates.iterrows():
+            pt = Point(c.lon, c.lat)
+            hit = point_near_hull(pt, hull) if hull is not None else haversine_m(c.lat, c.lon, lat, lon) <= RADIUS_M
+            if hit:
+                dist = haversine_m(c.lat, c.lon, lat, lon)
+                if dist < best_dist:
+                    best_dist = dist
+                    best_short_id = c.short_id
+        periods_df.loc[pos, "nearby_point"] = best_short_id
+    return periods_df
+
+
 # -----------------------
-# Simplify recording
+# Process recording
 # -----------------------
-def simplify_recording(recording_df):
+def process_recording(recording_df, db_con=None):
     """Process a single recording: outlier removal, Kalman filter, slow-point merge."""
 
     # Outlier removal
@@ -260,5 +305,10 @@ def simplify_recording(recording_df):
 
     # Merge slow points
     recording_df = merge_soliciting_events(recording_df)
+
+    if db_con:
+        recording_df = find_nearby_points(recording_df, db_con)
+
+    del recording_df["convex_hull"]
 
     return recording_df
