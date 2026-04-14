@@ -1,4 +1,5 @@
 import json
+import hashlib
 import pandas as pd
 from datetime import datetime
 from flask import jsonify, request, make_response
@@ -127,7 +128,6 @@ def tracking_completed():
 def get_recording(recording_id):
     """
     Returns the processed recording data for a single recording.
-
     Response body:
         {
             "recording_id": "...",
@@ -137,7 +137,6 @@ def get_recording(recording_id):
     """
     stop = RecordingStop.query.filter_by(recording_id=recording_id).first()
     completed = stop is not None
-
     query = """
         SELECT * FROM user_locations
         WHERE recording_id = :recording_id and user_id = :user_id
@@ -148,19 +147,20 @@ def get_recording(recording_id):
         if df.empty:
             return None
         simplified = process_recording(df, conn)
-
         records = simplified.to_dict("records")
-
         if not (len(simplified) > 1 or simplified["seconds_spent"].max() > 300):
             records = []
 
-    return jsonify(
-        {
-            "recording_id": recording_id,
-            "completed": completed,
-            "locations": records,
-        }
-    )
+    data = {
+        "recording_id": recording_id,
+        "completed": completed,
+        "locations": records,
+    }
+
+    response = make_response(jsonify(data))
+    etag = hashlib.md5(response.get_data()).hexdigest()
+    response.set_etag(etag)
+    return response.make_conditional(request)
 
 
 @app.route("/latest-recording/<location_share_secret>", methods=["GET"])
