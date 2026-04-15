@@ -7,7 +7,7 @@ import {fetchCurrentUser, currentUser, firstUserPromise, userMarkerGroup, create
 import {pendingGroup, updatePendingMarkers, addPending, getFuturePending} from './pending';
 import {renderReviews} from './render-reviews';
 import {maybeAddNetworkButton} from './network-button';
-import {drawRecordings, initializeUserLocationDisplay, initRecordingPicker, recordingGroup} from './recordings';
+import {drawRecordings, initializeUserLocationDisplay, initRecordingPicker, recordingGroup, updateRecordingInfo, getMarkerForStop } from './recordings';
 
 // Register service worker for offline functionality
 if ("serviceWorker" in navigator) {
@@ -18,7 +18,7 @@ if ("serviceWorker" in navigator) {
 // Exported variables appear on window.hitch
 export var addSpotPoints = [], // Array to store points when adding new spots
     addSpotLine = null, // Line connecting spots
-    active = null, // Currently active/selected markers
+    active = null, // Currently active/selected marker
     destLineGroup = L.layerGroup(), // Group for destination lines
     spotMarker, // Marker for hitchhiking spot
     destMarker // Marker for destination
@@ -39,21 +39,21 @@ var handleMarkerNavigation = function (marker) {
     active = marker
 
     addSpotPoints = []
+
     renderPoints()
 
     // Update sidebar with spot information
-    setTimeout(() => {
-        bar('.sidebar.show-spot')
-        // Create location link based on device type (mobile vs desktop)
-        $$('#spot-header a').href = window.ontouchstart ? `geo:${row[0]},${row[1]}` : ` https://www.google.com/maps/place/${row[0]},${row[1]}`
-        $$('#spot-header a').innerText = `${row[0].toFixed(4)}, ${row[1].toFixed(4)} ☍`
+    updateRecordingInfo(marker);
+    bar('.sidebar.show-spot')
+    // Create location link based on device type (mobile vs desktop)
+    $$('#spot-header a').href = window.ontouchstart ? `geo:${row[0]},${row[1]}` : ` https://www.google.com/maps/place/${row[0]},${row[1]}`
+    $$('#spot-header a').innerText = `${row[0].toFixed(4)}, ${row[1].toFixed(4)} ☍`
 
-        $$('#spot-summary').innerText = summaryText(row)
+    $$('#spot-summary').innerText = summaryText(row)
 
-        // Handle spot description and additional info
-        $$('#spot-text').replaceChildren(renderReviews(marker.options._reviews));
-        $$('#extra-review-button').style.display = row[3].length > 200 ? 'block': 'none';
-    }, 100)
+    // Handle spot description and additional info
+    $$('#spot-text').replaceChildren(renderReviews(marker.options._reviews));
+    $$('#extra-review-button').style.display = row[3].length > 200 ? 'block': 'none';
 };
 
 $$(".sidebar.show-spot").addEventListener("click", function (event) {
@@ -349,6 +349,24 @@ var addSpotStep = function (e) {
 
     if (action === 'done') {
         let center = map.getCenter()
+
+        const rec = window._recording
+
+        if (rec) {
+            const snapStop = addSpotPoints.length === 0
+                  ? rec.stops[rec.activeIndex]
+                  : rec.stops[rec.activeIndex + 1]
+            if (snapStop) {
+                const snapLatLng = L.latLng(snapStop.latitude, snapStop.longitude)
+                const snapPx = map.latLngToContainerPoint(snapLatLng)
+                const centerPx = map.latLngToContainerPoint(center)
+
+                if (snapPx.distanceTo(centerPx) < 7) {
+                    center = snapLatLng
+                }
+            }
+        }
+
         if (
             addSpotPoints[0] &&
             center.distanceTo(addSpotPoints[0]) < 1000 &&
@@ -373,8 +391,16 @@ var addSpotStep = function (e) {
 
     if (['done', 'review', 'skip'].includes(action)) {
         if (addSpotPoints.length === 1) {
-            if (map.getZoom() > 9) map.setZoom(9)
-            map.panTo(addSpotPoints[0])
+
+            if (window._recording && window._recording.activeIndex < window._recording.stops.length-1) {
+                const target = window._recording.stops[window._recording.activeIndex+1]
+                const zoom = map.getBoundsZoom([map.getCenter(), [target.latitude, target.longitude]]);
+                map.flyTo([target.latitude, target.longitude], zoom, {animate: true})
+            }
+            else {
+                if (map.getZoom() > 9) map.setZoom(9)
+                map.panTo(addSpotPoints[0])
+            }
             bar('.topbar.spot.step2')
         } else if (addSpotPoints.length === 2) {
             const destinationProvided = addSpotPoints[1].lat !== 'nan'
@@ -419,20 +445,13 @@ function initializeSpotForm(points, destinationProvided) {
     }
 
     // ── Prefill from recording data ──────────────────────────────────────────
-    const pf = window.prefillReviewData;
+    const pf = window._recording?.stops[window._recording?.activeIndex];
     const form_el = $$("#spot-form");
     const waitInput = $$('#spot-form input[name=wait]');
     const btn5  = $$('#wait-btn-5');
     const btn15 = $$('#wait-btn-15');
 
-    // Check if the prefill location matches the spot being added
-    const MATCH_THRESHOLD_M = 50;
-    let hasPrefill = false;
-    if (pf && pf.latitude != null && pf.longitude != null) {
-        const pfPoint = L.latLng(pf.latitude, pf.longitude);
-        const spotPoint = L.latLng(points[0].lat, points[0].lng);
-        hasPrefill = spotPoint.distanceTo(pfPoint) < MATCH_THRESHOLD_M;
-    }
+    let hasPrefill = !!pf;
 
     form_el.classList.toggle('has-prefill', hasPrefill);
 
@@ -481,16 +500,7 @@ function initializeSpotForm(points, destinationProvided) {
             waitInput.value = Math.max(0, totalMin - 15);
             updateBtnHighlight();
         };
-    } else {
-        // Clear any stale prefill state
-        $$('#prefill-hint-text').textContent = '';
-        form_el.classList.remove('prefill-long');
-        btn5.onclick = null;
-        btn15.onclick = null;
     }
-
-    // Clear prefillReviewData so it doesn't accidentally carry over
-    window.prefillReviewData = null;
 }
 
 bars.forEach(bar => {
@@ -559,12 +569,28 @@ function renderPoints() {
     spotMarker = destMarker = haloRing = null;
 
     if (addSpotPoints[0]) {
-        spotMarker = L.marker(addSpotPoints[0]);
+        const blueIcon = new L.Icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        });
+        spotMarker = L.marker(addSpotPoints[0], {icon: blueIcon});
         spotMarker.addTo(map);
     }
 
     if (addSpotPoints[1] && addSpotPoints[1].lat !== 'nan') {
-        destMarker = L.marker(addSpotPoints[1]);
+        const greenIcon = new L.Icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        });
+        destMarker = L.marker(addSpotPoints[1], {icon: greenIcon});
         destMarker.addTo(map);
     }
 
@@ -597,10 +623,12 @@ function renderPoints() {
 function clear() {
     bar()
     addSpotPoints = []
+    window._recording = null
     active = null
     renderPoints()
     updateAddSpotLine()
     document.body.classList.remove('adding-spot', 'menu')
+    console.error('cleared')
 }
 
 if (!window.location.hash.includes(',')) // we'll center on coord
@@ -613,8 +641,8 @@ $$('.hitch-map').focus()
 // validate add spot form input
 $$('#spot-form').addEventListener('submit', async function(event) {
     event.preventDefault()
-
-    let pendingLoc = addSpotPoints[0]
+    // copy in case it changes
+    const pendingLoc = [...addSpotPoints];
 
     let submitButton = this.querySelector("button");
     submitButton.disabled = true;
@@ -634,9 +662,8 @@ $$('#spot-form').addEventListener('submit', async function(event) {
     }
 
     if (resp.ok) {
-        location.hash = '#success';
-        await addPending(pendingLoc.lat, pendingLoc.lng)
-        updatePendingMarkers()
+        await addPending(pendingLoc)
+        updatePendingMarkers(pendingLoc)
     }
     else {
         errorMessage.textContent = result.error || "An unknown error occurred.";
@@ -665,9 +692,17 @@ function navigate() {
         bar('.sidebar.filters')
     }
     else if (args.length == 2 && !isNaN(args[0])) {
-        clear()
         let lat = +args[0], lon = +args[1]
         let m = closestMarker(allMarkers, lat, lon)
+
+        let rec = window._recording
+        let stopMarker = getMarkerForStop(rec?.stops[rec?.activeIndex])
+
+        clear()
+
+        if (stopMarker === m)
+            window._recording = rec
+
         handleMarkerNavigation(m)
         if (map.getZoom() < 3)
             map.setView(m.getLatLng(), 16)
@@ -676,6 +711,9 @@ function navigate() {
     else if (args[0] == 'success') {
         clear()
         bar('.sidebar.success')
+        // showing is handled in pending.js
+        const jumpBtn = document.querySelector('#jump-to-destination');
+        jumpBtn.style.display = 'none';
     }
     else {
         clear()

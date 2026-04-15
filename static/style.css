@@ -730,3 +730,9 @@ body:not(.sharing-location) #unshare-location, body:not(.sharing-location) #send
 #tracking-message {
     display: none;
 }
+#show-spot-recording {
+    display: none;
+}
+body.recording-marker-is-open #show-spot-recording {
+    display: block;
+}

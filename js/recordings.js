@@ -1,6 +1,6 @@
-import { firstUserPromise} from './user';
+import { firstUserPromise, userMarkers } from './user';
 import { UserLocationDisplay } from './user-location-display';
-import { outlinedPolyline, findClosestLocation, closestMarker, polygonDistanceToLatLng, addOutlineRing, C } from './utils';
+import { outlinedPolyline, findClosestLocation, closestMarker, polygonDistanceToLatLng, addOutlineRing, C, $$ } from './utils';
 
 let isTracking = false;
 let shareSecret;
@@ -678,7 +678,7 @@ export function drawRecordings(recordings, lastTimestamp) {
             });
             container.querySelector('.add-review-btn').addEventListener('click', () => {
                 const latlng = layer.getPopup()?.getLatLng() ?? layer.getCenter();
-                window.map.setView([latlng.lat, latlng.lng], 19, { animate: true });
+                window.map.setView([latlng.lat, latlng.lng], 17, { animate: true });
                 pl.closePopup();
                 document.querySelector('#addspot-control a')?.click();
             });
@@ -742,7 +742,7 @@ export function drawRecordings(recordings, lastTimestamp) {
                     window.map.setView([loc.latitude, loc.longitude], 19, { animate: true });
                     cm.closePopup();
                     document.querySelector('#addspot-control a')?.click();
-                    window.prefillReviewData = loc;
+                    window._recording = {stops, activeIndex: index};
                 });
                 return container;
             });
@@ -766,13 +766,46 @@ export function drawRecordings(recordings, lastTimestamp) {
             cm.bringToFront();
 
             if (loc.nearby_point) {
-                let closest = window.reviewData.find(review => review[C.SHORT_ID] === loc.nearby_point)?._marker;
+                let closest = getMarkerForStop(loc);
                 if (closest) {
-                    closest.setStyle({fillOpacity: 1, fillColor: '#38f', color: 'white', weight: 2})
-                    closest._rec = {id: drawRecordingId, loc};
-                    cm.setStyle({fillOpacity: 0.5, opacity: 0.5, radius: 4})
-                    // TODO: move user dot along with the marker
-                    setTimeout(_ => closest.bringToFront(), 0);
+                    cm.setStyle({fillOpacity: 0.5, opacity: 0.5, radius: 4});
+
+                    const nearbyMarker = L.circleMarker(closest.getLatLng(), {
+                        ...closest.options,
+                        fillOpacity: 1,
+                        fillColor: '#38f',
+                        color: 'white',
+                        weight: 2,
+                        interactive: true,
+                        renderer: svgRenderer,
+                    });
+                    nearbyMarker.on('click', e => {
+                        window._recording = {stops, activeIndex: index, nearbyMarker: closest};
+                        closest.fire('click', e);
+                    });
+
+                    if (window.hitch.active == closest) {
+                        window._recording = {stops, activeIndex: index, nearbyMarker: closest};
+                        updateRecordingInfo(closest)
+                    }
+
+                    nearbyMarker.addTo(recordingGroup);
+
+                    if (closest in userMarkers) {
+                        const userDot = new L.circleMarker(closest.getLatLng(), {
+                            stroke: false,
+                            fill: true,
+                            radius: 1,
+                            fillColor: 'white',
+                            fillOpacity: 1,
+                            interactive: false,
+                            renderer: svgRenderer
+                        });
+                        userDot.addTo(recordingGroup);
+                    }
+
+                    recordingLayers.push({ layer: nearbyMarker, type: 'circleMarker' });
+                    setTimeout(() => nearbyMarker.bringToFront(), 0);
                 }
             }
         });
@@ -782,6 +815,11 @@ export function drawRecordings(recordings, lastTimestamp) {
             pl.bringToBack();
         }
     });
+}
+
+export function getMarkerForStop(loc) {
+    if (!loc?.nearby_point) return undefined;
+    return window.reviewData.find(review => review[C.SHORT_ID] === loc.nearby_point)?._marker;
 }
 
 function drawLocalRecordings() {
@@ -854,4 +892,19 @@ async function applyPickerSelection(selection) {
     }
 
     drawRecordings(filtered, lastRecordingTimestamp);
+}
+
+export function updateRecordingInfo(marker) {
+    const isRecordingMarker = marker === window._recording?.nearbyMarker;
+    document.body.classList.toggle('recording-marker-is-open', isRecordingMarker);
+
+    const stop = window._recording?.stops?.[window._recording?.activeIndex];
+    if (stop) {
+        $$('#show-spot-arrival').innerText = stop.timestamp
+            ? new Date(stop.timestamp).toLocaleString()
+            : 'N/A';
+        $$('#show-spot-time-spent').innerText = stop.seconds_spent != null
+            ? `${Math.ceil(stop.seconds_spent / 60)} min`
+            : 'N/A';
+    }
 }

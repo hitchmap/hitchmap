@@ -1,6 +1,8 @@
 import { C } from './utils.js';
 export let currentUser, userRecordings;
 export let userMarkerGroup = L.layerGroup();
+export let userMarkers = [];
+
 export async function fetchCurrentUser() {
     const res = await fetch('/user');
     const userData = await res.json();
@@ -27,7 +29,7 @@ firstUserPromise.then(user => {
 export function createUserMarkers() {
     if (!currentUser) return;
     userMarkerGroup.clearLayers();
-    const userMarkers = window.reviewData.filter(
+    userMarkers = window.reviewData.filter(
         review => review[C.HITCHHIKER] &&
                   review[C.HITCHHIKER].toLowerCase() === currentUser.username.toLowerCase()
     ).map(review => review._marker);
