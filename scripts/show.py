@@ -142,7 +142,6 @@ points.loc[points.id.isin(range(1000000, 1040000)), "comment"] = (
 )
 
 points["datetime"] = pd.to_datetime(points.datetime)
-points["ride_datetime"] = pd.to_datetime(points.ride_datetime, errors="coerce")  # handels invalid dates
 
 rads = points[["lon", "lat", "dest_lon", "dest_lat"]].values.T
 

@@ -1,6 +1,9 @@
 {% extends "index_root.html" %}
 <!DOCTYPE html>
 {% block content %}
+<div id="refresh-control" class="leaflet-bar horizontal-button fallback-visible"  onclick="caches.open('hitchmap-v1').then(c=>c.keys().then(k=>Promise.all(k.filter(r=>!r.url.endsWith('/error.html')).map(r=>c.delete(r))))).then(()=>location.reload())">
+        <i class="fa-solid fa-refresh small-centered-icon"></i>
+    </div>
     <div id="leaflet-controls" style="display:none;">
         <div id="menu-control" class="leaflet-bar horizontal-button">
             <a href="javascript:void(0);">☰</a>
@@ -16,10 +19,6 @@
 
         <div id="filter-control" class="leaflet-bar horizontal-button">
             <a href="#filters">🔍 Filters</a>
-        </div>
-
-        <div id="refresh-control" class="leaflet-bar horizontal-button">
-            <i class="fa-solid fa-refresh small-centered-icon"></i>
         </div>
 
         <div id="tile-control" class="leaflet-bar horizontal-button">
@@ -81,6 +80,7 @@
         <p class=greyed></p>
         <form id=spot-form action="/experience" method=post>
             <input type="hidden" name="coords">
+            <input type="hidden" name="recording">
             <label>How do you rate the spot?</label>
             <div class="clear">
                 <div class="rate">
@@ -247,7 +247,7 @@
         </svg>
     </a>
     <div class="topbar spot step1">
-        <span>Zoom the crosshairs into your hitchhiking spot. Be as precise as possible!</span>
+        <span>Zoom the crosshairs into your hitchhiking spot or click on an existing spot.</span>
         <br>
         <button data-action="done">Done</button>
         <button data-action="cancel">Cancel</button>

@@ -64,15 +64,14 @@ with app.app_context():
 def post_location():
     datalist = request.get_json() or []
     for data in datalist:
-        print(data)
         data["user_id"] = current_user.id
 
-        assert -90 <= data["lat"] <= 90
-        assert -180 <= data["lon"] <= 180
+        assert -90 <= data["latitude"] <= 90
+        assert -180 <= data["longitude"] <= 180
         assert 1700000000000 < data["timestamp"] < 111700000000000
-        assert 0 <= accuracy <= 10000000
-        assert 0 <= speed <= 10000000
-        assert type(tracking) == bool
+        assert 0 <= data["accuracy"] <= 10000000
+        assert 0 <= data["speed"] <= 10000000
+        assert type(data["tracking"]) == bool
 
         sql = text("""
             INSERT OR REPLACE INTO user_locations (
@@ -145,7 +144,7 @@ def get_recording(recording_id):
     with db.engine.connect() as conn:
         df = pd.read_sql(query, con=conn, params={"recording_id": recording_id, "user_id": current_user.id})
         if df.empty:
-            return None
+            return {"error": "Recording not found."}, 404
         simplified = process_recording(df, conn)
         records = simplified.to_dict("records")
         if not (len(simplified) > 1 or simplified["seconds_spent"].max() > 300):

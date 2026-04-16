@@ -26,7 +26,12 @@ export var addSpotPoints = [], // Array to store points when adding new spots
 // Handle marker click events
 function handleMarkerClick(marker, point, e) {
     // Prevent interaction if certain UI elements are visible
-    if ($$('.topbar.visible') || $$('.sidebar.spot-form-container.visible')) return
+    if ($$('.topbar.visible')) {
+        map.panTo(marker.getLatLng())
+        return
+    }
+
+    if ($$('.sidebar.spot-form-container.visible')) return
 
     window.location.hash = `${point.lat},${point.lng}`
 
@@ -297,7 +302,9 @@ const refreshEl = addAsLeafletControl('#refresh-control');
 
 const refreshPending = document.querySelector('#refresh-pending');
 
-refreshEl.onclick = refreshPending.onclick = async e => {
+// this class is included in the HTML so users can clear their cache even when the JS fails
+refreshEl.classList.remove('fallback-visible');
+refreshPending.onclick = async e => {
     await clearCacheExceptErrorPage();
     location.reload()
 }
@@ -349,23 +356,21 @@ var addSpotStep = function (e) {
 
     if (action === 'done') {
         let center = map.getCenter()
-
         const rec = window._recording
 
-        if (rec) {
-            const snapStop = addSpotPoints.length === 0
-                  ? rec.stops[rec.activeIndex]
-                  : rec.stops[rec.activeIndex + 1]
-            if (snapStop) {
-                const snapLatLng = L.latLng(snapStop.latitude, snapStop.longitude)
-                const snapPx = map.latLngToContainerPoint(snapLatLng)
-                const centerPx = map.latLngToContainerPoint(center)
+        const snapCandidates = []
 
-                if (snapPx.distanceTo(centerPx) < 7) {
-                    center = snapLatLng
-                }
-            }
-        }
+        const snapStop = rec && (addSpotPoints.length === 0
+            ? rec.stops[rec.activeIndex]
+            : rec.stops[rec.activeIndex + 1])
+        if (snapStop) snapCandidates.push(L.latLng(snapStop.latitude, snapStop.longitude))
+
+        const closest = closestMarker(allMarkers, center.lat, center.lng)
+        if (closest) snapCandidates.push(closest.getLatLng())
+
+        const centerPx = map.latLngToContainerPoint(center)
+        const snap = snapCandidates.find(ll => map.latLngToContainerPoint(ll).distanceTo(centerPx) < 7)
+        if (snap) center = snap
 
         if (
             addSpotPoints[0] &&
@@ -464,10 +469,6 @@ function initializeSpotForm(points, destinationProvided) {
         // Show hint
         $$('#time-spent-display').textContent = totalMin;
 
-        // Prefill wait time
-        if (prefillWait > 1)
-            waitInput.value = prefillWait;
-
         // Show/hide break buttons based on total time >= 16 min
         form_el.classList.toggle('prefill-long', totalMin >= 16);
 
@@ -532,7 +533,7 @@ map.on('click', e => {
         } else {
             let userPolylines = recordingGroup.getLayers().filter(e => e.getLatLngs && e.options.interactive !== false)
             let res = findClosestPolyline(e.latlng, userPolylines)
-            if (map.latLngToLayerPoint(res.point).distanceTo(layerPoint) < 20) {
+            if (res.point && map.latLngToLayerPoint(res.point).distanceTo(layerPoint) < 20) {
                 opened = true
                 res.polyline.fire('click', e)
             }

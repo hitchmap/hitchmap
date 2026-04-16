@@ -736,3 +736,9 @@ body:not(.sharing-location) #unshare-location, body:not(.sharing-location) #send
 body.recording-marker-is-open #show-spot-recording {
     display: block;
 }
+.fallback-visible {
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    z-index: 100000;
+}

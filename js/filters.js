@@ -14,7 +14,7 @@ const startTimeFilter = document.getElementById('start-time-filter');
 const endTimeFilter = document.getElementById('end-time-filter');
 const clearFilters = document.getElementById('clear-filters');
 
-let isDragging = false, radAngle = 0;
+let isDragging = false, radAngle = -Math.PI / 2;
 
 let shareSecret, fetchInterval, sharedRecordings;
 

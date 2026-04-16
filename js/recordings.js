@@ -20,7 +20,6 @@ let loadedRecordings = {};
 let knownRecordingIds = [];
 
 async function fetchRecording(id) {
-    if (loadedRecordings[id]) return loadedRecordings[id];
     try {
         const res = await fetch(`/recording/${encodeURIComponent(id)}`);
         if (!res.ok) {
@@ -39,10 +38,8 @@ async function fetchRecording(id) {
 }
 
 async function ensureRecordingLoaded(id) {
-    if (!loadedRecordings[id]) {
-        await fetchRecording(id);
-    }
-    return loadedRecordings[id] ?? null;}
+    return loadedRecordings[id] ?? await fetchRecording(id);
+}
 
 // ─── Recording picker state ───────────────────────────────────────────────────
 const PICKER_STORAGE_KEY   = 'hitchmap_active_picker_selection';
@@ -464,14 +461,38 @@ if (window.Capacitor) {
         isTracking = true;
         updateState();
         await startService();
+        startRecordingPoll();
     }
 
     async function stopTracking() {
+        const completedId = recordingId;
+
         isTracking = false;
         updateState();
         recordingId = null;
-        if (!shareSecret) await stopService();
-        else              await configure();
+
+        if (!shareSecret) {
+            stopRecordingPoll();
+            await stopService();
+        } else {
+            await configure();
+        }
+
+        if (completedId) {
+            // Fetch the final state of the just-completed recording
+            await fetchRecording(completedId);
+
+            // Ensure it's in the known list
+            if (!knownRecordingIds.includes(completedId)) {
+                knownRecordingIds.push(completedId);
+            }
+
+            // Switch picker selection to the newly completed recording
+            activePickerSelection = completedId;
+
+            savePickerSelection(activePickerSelection, knownRecordingIds);
+            await applyAndRender(knownRecordingIds);
+        }
     }
 
     async function startSharing() {
@@ -485,6 +506,7 @@ if (window.Capacitor) {
             const shareUrl = `${location.origin}/?share-secret=${shareSecret}`;
             updateState();
             await startService();
+            startRecordingPoll();
             Share.share({ url: shareUrl });
         } catch (error) {
             console.error('Error starting share:', error);
@@ -497,7 +519,10 @@ if (window.Capacitor) {
             await fetch('/unshare-location', { method: 'POST', credentials: 'include' });
             shareSecret = false;
             updateState();
-            if (!isTracking) await stopService();
+            if (!isTracking) {
+                stopRecordingPoll();
+                await stopService();
+            }
         } catch (error) {
             console.error('Error stopping share:', error);
         }
@@ -739,7 +764,7 @@ export function drawRecordings(recordings, lastTimestamp) {
                     });
                 }
                 container.querySelector('.add-review-btn').addEventListener('click', () => {
-                    window.map.setView([loc.latitude, loc.longitude], 19, { animate: true });
+                    window.map.setView([loc.latitude, loc.longitude], 17, { animate: true });
                     cm.closePopup();
                     document.querySelector('#addspot-control a')?.click();
                     window._recording = {stops, activeIndex: index};
@@ -907,4 +932,30 @@ export function updateRecordingInfo(marker) {
             ? `${Math.ceil(stop.seconds_spent / 60)} min`
             : 'N/A';
     }
+}
+
+let recordingPollInterval = null;
+
+async function refreshRecording(rec) {
+    if (!rec) return;
+    const data = await fetchRecording(rec);
+    if (!data) return;
+    const completedIds = knownRecordingIds.filter(id => id !== rec);
+    if (loadShowAll()) {
+        await drawRecordingsForIds(knownRecordingIds);
+    } else {
+        await applyPickerSelection(activePickerSelection);
+    }
+    updateThumb(completedIds, activePickerSelection);
+}
+
+function startRecordingPoll() {
+    if (recordingPollInterval) return;
+    recordingPollInterval = setInterval(_ => refreshRecording(recordingId), 30_000);
+}
+
+function stopRecordingPoll() {
+    if (!recordingPollInterval) return;
+    clearInterval(recordingPollInterval);
+    recordingPollInterval = null;
 }
