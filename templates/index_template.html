@@ -41,6 +41,10 @@
             </div>
         </details>
 
+        <div id="bugreport-control" class="leaflet-bar horizontal-button" style="font-size: 9px;">
+            <a href="javascript:;">🐛 Report a bug</a>
+        </div>
+
         <div id="flex-break-1" class="flex-break" style="display:none"></div>
         <div id="flex-break-2" class="flex-break" style="display:none"></div>
         <div id="flex-break-3" class="flex-break" style="display:none"></div>
@@ -266,13 +270,6 @@
         <button data-action="cancel">Cancel</button>
     </div>
     <script>
-        const saved = localStorage.getItem('lang');
-
-        // Auto-redirect homepage to saved language
-        if (location.pathname === '/' && saved && saved !== '/') {
-            location.href = saved + location.search + location.hash;
-        }
-
         var markerData = {{ markers | safe }}
         var reviewData = {{ review_data | safe }}
         var reviewColumns = {{ review_columns | safe }}

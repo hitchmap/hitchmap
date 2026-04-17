@@ -66,6 +66,10 @@ export function renderReviews(reviews) {
 
             return `, ${dayName} ${day} ${months[month - 1]} ${year}, ${timePart}`;
         }
+        function formatDateFallback(dateString) {
+            if (!dateString) return '';
+            return ', ' + new Date(dateString).toLocaleDateString(document.documentElement.lang, { month: 'long', year: 'numeric' });
+        }
 
         // Create user link span
         const userLinkSpan = document.createElement('span');
@@ -83,7 +87,8 @@ export function renderReviews(reviews) {
         authorDateTimeEl.appendChild(userLinkSpan);
 
         // Add datetime
-        const datetimeText = formatDateTime(review[C.RIDE_DATETIME]);
+        const datetimeText = formatDateTime(review[C.RIDE_DATETIME]) || formatDateFallback(review[C.DATETIME]);
+
         if (datetimeText) {
             const datetimeSpan = document.createElement('span');
             datetimeSpan.textContent = datetimeText;

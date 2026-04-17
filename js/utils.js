@@ -1,6 +1,14 @@
 // Utility functions and global variables
 export function $$ (e) { return document.querySelector(e) }
 
+export function debounce(fn, delay) {
+    let timer;
+    return function (...args) {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn.apply(this, args), delay);
+    };
+}
+
 export const bars = document.querySelectorAll('.sidebar, .topbar');
 
 export function bar(selector) {

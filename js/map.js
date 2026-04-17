@@ -309,7 +309,11 @@ refreshPending.onclick = async e => {
     location.reload()
 }
 
-addAsLeafletControl('#lang-control');
+if (window.Capacitor) {
+    addAsLeafletControl('#location-tracking-control', 'bottomleft');
+    let bugReport = addAsLeafletControl('#bugreport-control', 'bottomright');
+    bugReport.onclick = () => alert('Please email info@hitchmap.com with your bugs!')
+}
 
 // Recording picker control (visibility governed by body.has-multiple-recordings via CSS)
 addAsLeafletControl('#recording-picker-control', 'bottomleft');
@@ -326,8 +330,6 @@ var zoom = $$('.leaflet-control-zoom')
 zoom.parentNode.appendChild(zoom)
 
 // addAsLeafletControl('#donate-control', 'bottomright');
-
-if (window.Capacitor) addAsLeafletControl('#location-tracking-control', 'bottomleft');
 
 $$('#sb-close').onclick = function (e) {
     navigateHome()

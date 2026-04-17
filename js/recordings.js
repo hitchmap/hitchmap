@@ -1,6 +1,6 @@
 import { firstUserPromise, userMarkers } from './user';
 import { UserLocationDisplay } from './user-location-display';
-import { outlinedPolyline, findClosestLocation, closestMarker, polygonDistanceToLatLng, addOutlineRing, C, $$ } from './utils';
+import { outlinedPolyline, findClosestLocation, closestMarker, polygonDistanceToLatLng, addOutlineRing, C, $$, debounce } from './utils';
 
 let isTracking = false;
 let shareSecret;
@@ -18,6 +18,8 @@ let localRecordingGroupBack;
 // Keyed by recording ID; values are location arrays (populated on first need).
 let loadedRecordings = {};
 let knownRecordingIds = [];
+
+let shownAlert = false;
 
 async function fetchRecording(id) {
     try {
@@ -336,9 +338,17 @@ async function drawRecordingsForIds(ids) {
 
 if (window.Capacitor) {
     const BackgroundGeolocation = window.BackgroundGeolocation;
-    const {SplashScreen, Share, App} = window.Capacitor.Plugins;
+    const {SplashScreen, Share, App, ScreenOrientation, LocalNotifications} = window.Capacitor.Plugins;
+
+    if (ScreenOrientation) ScreenOrientation.lock({ orientation: 'portrait' });
+
+    let lastResumeTime = 0;
 
     App.addListener('resume', async () => {
+        const now = Date.now();
+        if (now - lastResumeTime < 1000) return;
+        lastResumeTime = now;
+
         console.log('App has resumed');
         if (isTracking || shareSecret) await startService();
     });
@@ -428,6 +438,16 @@ if (window.Capacitor) {
     }
 
     async function startService() {
+        let geoStatus = await BackgroundGeolocation.checkStatus();
+        let notificationStatus = await LocalNotifications.checkPermissions()
+
+        if (notificationStatus.display !== 'granted' || !geoStatus.hasPermissions) {
+            if (!shownAlert) {
+                alert("To track your trip, you must give permissions for both notifications and exact location usage. We will only use notifications to keep the app alive while your phone is on standby.")
+                shownAlert = true;
+            }
+        }
+
         await configure();
         startCompassWatch();
         if (!await isServiceRunning()) receivedLocations = false;
@@ -440,6 +460,7 @@ if (window.Capacitor) {
     }
 
     async function stopService() {
+        shownAlert = false;
         if (!await isServiceRunning()) return;
         try {
             document.body.classList.remove('has-user-location');
