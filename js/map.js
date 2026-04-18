@@ -104,7 +104,7 @@ let heatLayer = L.heatLayer(allCoords, {radius: 5, blur: 1, maxZoom: 1, minOpaci
 // Note: neither will be shown when a filter is active
 function showHeatmapOrDefaultPane() {
     let {canvas} = allMarkersRenderer._ctx
-    if (map.getZoom() < 7) {
+    if (map.getZoom() < 7 && !$$('body.has-specific-filter')) {
         canvas.style.display = 'none';
         allMarkersRenderer._ctx.clearRect(0, 0, canvas.width, canvas.height)
         // performance hack: override redraw to stop (off-screen) draws
@@ -117,8 +117,6 @@ function showHeatmapOrDefaultPane() {
         heatLayer.remove()
     }
 }
-
-showHeatmapOrDefaultPane()
 
 L.control.scale().addTo(map);
 
@@ -736,6 +734,7 @@ window.navigateHome = navigateHome
 window.handleMarkerClick = handleMarkerClick
 window.allMarkers = allMarkers;
 window.allMarkerGroup = allMarkerGroup;
+window.updateZoomClasses = updateZoomClasses;
 
 // Set up hash change listener
 window.onhashchange = navigate

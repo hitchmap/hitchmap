@@ -205,7 +205,7 @@ def get_user():
             FROM user_locations
             WHERE user_id = :user_id
             GROUP BY recording_id
-            ORDER BY MIN(timestamp)
+            ORDER BY MAX(timestamp)
         """),
         {"user_id": current_user.id},
     ).fetchall()

@@ -290,7 +290,7 @@ body.adding-spot .horizontal-button {
     pointer-events: none;
 }
 /* show the actual markers, but not at full opacity */
-body.mid-zoom .leaflet-overlay-pane canvas:not(.leaflet-heatmap-layer) {
+body:not(.has-specific-filter).mid-zoom .leaflet-overlay-pane canvas:not(.leaflet-heatmap-layer) {
     opacity: 0.3;
 }
 /* hide the heatmap when not zoomed out */

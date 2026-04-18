@@ -170,6 +170,7 @@ if __name__ == "__main__":
             subprocess.run(["python", "scripts/show.py"])
 
     def start_watcher():
+        subprocess.run(["python", "scripts/show.py"])
         observer = Observer()
         observer.schedule(FolderChangeHandler(), path=".", recursive=True)
         observer.start()

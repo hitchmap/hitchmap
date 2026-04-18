@@ -229,6 +229,7 @@ export function applyParams() {
         });
 
         document.body.classList.add('filtering');
+        document.body.classList.toggle('has-specific-filter', uniqueMarkers.size < 10000);
     } else {
         // Restore all markers to their original positions
         window.allMarkers.forEach(marker => {
@@ -236,7 +237,10 @@ export function applyParams() {
             if (row) marker.setLatLng(L.latLng(row[0], row[1]));
         });
         document.body.classList.remove('filtering');
+        document.body.classList.remove('has-specific-filter');
     }
+
+    window.updateZoomClasses();
 
     const newShareSecret = getQueryParameter('share-secret');
 
