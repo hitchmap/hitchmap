@@ -523,7 +523,7 @@ map.on('click', e => {
 
     const isModernTap = e.originalEvent.pointerType === 'touch';
 
-    if (!document.body.classList.contains('zoomed-out') && (isModernTap || window.innerWidth < 780)) {
+    if ((!document.body.classList.contains('zoomed-out') || $$('body.has-specific-filter')) && (isModernTap || window.innerWidth < 780)) {
         var layerPoint = map.latLngToLayerPoint(e.latlng)
         let markers = allMarkers
         var closest = closestMarker(markers, e.latlng.lat, e.latlng.lng)

@@ -397,6 +397,9 @@ if (window.Capacitor) {
             }
             if (!recordingId) recordingId = generateRecordingId();
 
+            // debug
+            const locationProvider = window.useraw ? BackgroundGeolocation.RAW_PROVIDER : BackgroundGeolocation.ACTIVITY_PROVIDER
+
             await BackgroundGeolocation.configure({
                 stationaryRadius: 0,
                 distanceFilter: 0,
@@ -408,7 +411,7 @@ if (window.Capacitor) {
                 stopOnTerminate: false,
                 startOnBoot: false,
                 startForeground: true,
-                locationProvider: BackgroundGeolocation.ACTIVITY_PROVIDER,
+                locationProvider,
                 interval: 5000,
                 fastestInterval: 5000,
                 activitiesInterval: 5000,
@@ -446,6 +449,10 @@ if (window.Capacitor) {
                 alert("To track your trip, you must give permissions for both notifications and exact location usage. We will only use notifications to keep the app alive while your phone is on standby.")
                 shownAlert = true;
             }
+        }
+
+        if (!geoStatus.locationServicesEnabled) {
+            alert('Enable GPS to get an accurate recording.')
         }
 
         await configure();

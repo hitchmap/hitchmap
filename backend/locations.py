@@ -63,6 +63,12 @@ with app.app_context():
 @login_required
 def post_location():
     datalist = request.get_json() or []
+
+    print(datalist)
+
+    if type(datalist) != list:
+        datalist = [datalist]
+
     for data in datalist:
         data["user_id"] = current_user.id
 
@@ -70,7 +76,7 @@ def post_location():
         assert -180 <= data["longitude"] <= 180
         assert 1700000000000 < data["timestamp"] < 111700000000000
         assert 0 <= data["accuracy"] <= 10000000
-        assert 0 <= data["speed"] <= 10000000
+        assert data["speed"] is None or 0 <= data["speed"] <= 10000000
         assert type(data["tracking"]) == bool
 
         sql = text("""

@@ -58,7 +58,9 @@ async function handleFetch(event) {
         }
         try {
             const fetchedResponse = await fetch(request);
-            event.waitUntil(cache.put(strippedUrl, fetchedResponse.clone()));
+            if (fetchedResponse.ok) {                                              // ← don't cache errors
+                event.waitUntil(cache.put(strippedUrl, fetchedResponse.clone()));
+            }
             return fetchedResponse;
         } catch (error) {
             if (cachedResponse) return cachedResponse;
@@ -66,7 +68,7 @@ async function handleFetch(event) {
             if (errorResponse) return errorResponse;
             throw error;
         }
-}
+    }
 
     if (isExternal) {
         // Cache-first for external domains
@@ -76,13 +78,17 @@ async function handleFetch(event) {
         }
         // If not in cache, fetch from network
         const fetchedResponse = await fetch(request);
-        event.waitUntil(cache.put(strippedUrl, fetchedResponse.clone()));
+        if (fetchedResponse.ok) {                                                  // ← don't cache errors
+            event.waitUntil(cache.put(strippedUrl, fetchedResponse.clone()));
+        }
         return fetchedResponse;
     } else {
         // Network-first for same-origin requests
         try {
             const fetchedResponse = await fetch(request);
-            event.waitUntil(cache.put(strippedUrl, fetchedResponse.clone()));
+            if (fetchedResponse.ok) {                                              // ← don't cache errors
+                event.waitUntil(cache.put(strippedUrl, fetchedResponse.clone()));
+            }
             return fetchedResponse;
         } catch (error) {
             // If the network is unavailable, get from cache

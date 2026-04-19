@@ -8,6 +8,7 @@ import pandas as pd
 import requests
 from flask import request, send_file, send_from_directory, jsonify, redirect
 from flask_security import current_user
+from sqlalchemy import text
 
 from backend.shared import app, db, root_dir, dist_dir, static_dir, EMAIL, logger, short_id_to_long_id
 from backend.user import init_security, security
@@ -139,6 +140,30 @@ def original(short_id):
     with db.engine.connect() as conn:
         comment = pd.read_sql("select comment from points where id = ?", db.engine, params=(pid,)).iloc[0, 0]
         return {"comment": comment}
+
+
+@app.route("/log-error", methods=["POST"])
+def log_error():
+    data = request.get_json(silent=True) or {}
+    ip = (request.headers.getlist("X-Real-IP") or [request.remote_addr])[-1]
+
+    with db.engine.connect() as conn:
+        with conn.begin():
+            conn.execute(
+                text(
+                    "INSERT INTO client_errors (message, stack, ip, user_agent, user_id, datetime)"
+                    " VALUES (:message, :stack, :ip, :user_agent, :user_id, :datetime)"
+                ),
+                {
+                    "message": str(data.get("message", ""))[:20000],
+                    "stack": str(data.get("stack", ""))[:10000],
+                    "ip": str(ip)[:45],  # max IPv6 length
+                    "user_agent": str(request.headers.get("User-Agent", ""))[:500],
+                    "user_id": int(current_user.id) if not current_user.is_anonymous else None,
+                    "datetime": datetime.utcnow(),  # pass datetime, not str
+                },
+            )
+    return jsonify({"success": True})
 
 
 @app.route("/<path:path>")

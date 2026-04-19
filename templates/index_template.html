@@ -270,6 +270,22 @@
         <button data-action="cancel">Cancel</button>
     </div>
     <script>
+     if (window.Capacitor) {
+         async function logError(error) {
+             await fetch("/log-error", {
+                 method: "POST",
+                 headers: { "Content-Type": "application/json" },
+                 body: JSON.stringify({
+                     message: error.message,
+                     stack: error.stack
+                 }),
+             });
+         }
+         window.addEventListener("unhandledrejection", (e) => logError(e.reason));
+         window.onerror = (msg, src, line, col, err) => { if (err) logError(err); };
+     }
+    </script>
+    <script>
         var markerData = {{ markers | safe }}
         var reviewData = {{ review_data | safe }}
         var reviewColumns = {{ review_columns | safe }}
