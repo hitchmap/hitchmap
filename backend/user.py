@@ -123,6 +123,7 @@ app.config["SECURITY_MSG_USERNAME_ALREADY_ASSOCIATED"] = (
 )
 app.config["SECURITY_POST_REGISTER_VIEW"] = "/#registered"
 app.config["SECURITY_CHANGE_EMAIL"] = True
+app.config["SECURITY_DEFAULT_REMEMBER_ME"] = True
 
 # Initialize Flask-Security
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)

@@ -4,6 +4,7 @@ import secrets
 from flask import Flask
 from flask_mailman import Mail
 from flask_sqlalchemy import SQLAlchemy
+import base64
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

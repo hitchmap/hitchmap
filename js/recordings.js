@@ -398,13 +398,15 @@ if (window.Capacitor) {
             if (!recordingId) recordingId = generateRecordingId();
 
             // debug
+
+            // window.useraw = true;
             const locationProvider = window.useraw ? BackgroundGeolocation.RAW_PROVIDER : BackgroundGeolocation.ACTIVITY_PROVIDER
 
             await BackgroundGeolocation.configure({
                 stationaryRadius: 0,
                 distanceFilter: 0,
                 desiredAccuracy: BackgroundGeolocation.HIGH_ACCURACY,
-                debug: true,
+                debug: false,
                 notificationsEnabled: true,
                 notificationTitle: "Hitchmap",
                 notificationText: "Location tracking active",
@@ -442,7 +444,8 @@ if (window.Capacitor) {
 
     async function startService() {
         let geoStatus = await BackgroundGeolocation.checkStatus();
-        let notificationStatus = await LocalNotifications.checkPermissions()
+        // let notificationStatus = await LocalNotifications.checkPermissions()
+        let notificationStatus = {display: 'granted'}
 
         if (notificationStatus.display !== 'granted' || !geoStatus.hasPermissions) {
             if (!shownAlert) {
