@@ -718,15 +718,45 @@ ul.no-style {
 .disabled {
     color: #999 !important;
 }
-body.tracking #start-tracking, body:not(.tracking) #stop-tracking {
+#start-tracking,
+#tracking-status-permissions,
+#tracking-status-locating,
+#stop-tracking {
     display: none;
 }
-body.sharing-location #share-location {
+
+/* idle: show start button */
+body[data-tracking-state="idle"] #start-tracking {
+    display: block;
+}
+
+/* permissions: waiting for user to grant permissions */
+body[data-tracking-state="permissions"] #tracking-status-permissions {
+    display: block;
+}
+
+/* locating: service running, waiting for first GPS fix */
+body[data-tracking-state="locating"] #tracking-status-locating {
+    display: block;
+}
+
+/* tracking: actively recording */
+body[data-tracking-state="tracking"] #stop-tracking {
+    display: block;
+}
+
+/* share-location only available once actively tracking */
+#share-location {
     display: none;
 }
-body:not(.sharing-location) #unshare-location, body:not(.sharing-location) #send-location {
-    display: none;
+body[data-tracking-state="tracking"] #share-location {
+    display: block;
 }
+
+/* sharing-location overrides */
+body.sharing-location #share-location     { display: none; }
+body:not(.sharing-location) #unshare-location { display: none; }
+body:not(.sharing-location) #send-location    { display: none; }
 #tracking-message {
     display: none;
 }

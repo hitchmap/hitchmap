@@ -112,12 +112,12 @@ from scipy.ndimage import maximum_filter1d, binary_opening
 def merge_soliciting_events(
     df,
     # "Fast burst" detector
-    fast_window=3,
+    fast_window=5,  # 25 seconds
     fast_speed_kmh=10.0,
     fast_consistency_kmh=8.0,
     fast_linearity=0.6,
     # "Steady walk" detector
-    walk_window=60,
+    walk_window=60,  # 5 minutes
     walk_median_kmh=4.0,
     walk_floor_kmh=1.5,
     walk_linearity=0.3,

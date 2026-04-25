@@ -16,7 +16,7 @@ export async function fetchCurrentUser() {
         _permissions: userData._permissions,
         location_share_secret: userData.location_share_secret,
         last_location_timestamp: userData.last_location_timestamp,
-        recording_ids: userData.recording_ids ?? [],
+        recordings: userData.recordings ?? [],
     };
     return currentUser;
 }

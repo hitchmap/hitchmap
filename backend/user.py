@@ -189,37 +189,32 @@ def form():
 
 @app.route("/user", methods=["GET"])
 def get_user():
-    """
-    Returns user metadata and a list of recording IDs (no location data).
-    The client fetches each recording individually via /recording/<id>.
-    """
     if current_user.is_anonymous:
         return jsonify({"logged_in": False, "_permissions": []})
-
     permissions = list(set(perm for role in current_user.roles for perm in role.permissions))
-
     rows = db.session.execute(
         text("""
-            SELECT
-                recording_id,
-                MAX(timestamp) AS last_timestamp
-            FROM user_locations
-            WHERE user_id = :user_id
-            GROUP BY recording_id
-            ORDER BY MAX(timestamp)
+        SELECT
+            recording_id,
+            MIN(timestamp) AS first_timestamp,
+            MAX(timestamp) AS last_timestamp
+        FROM user_locations
+        WHERE user_id = :user_id
+        GROUP BY recording_id
+        HAVING
+            (MAX(timestamp) - MIN(timestamp)) >= 600000
+            OR MAX(timestamp) >= (strftime('%s','now') * 1000 - 3600000);
         """),
         {"user_id": current_user.id},
     ).fetchall()
-
-    recording_ids = [r.recording_id for r in rows]
+    recordings = {r.recording_id: {"min_ts": r.first_timestamp, "max_ts": r.last_timestamp} for r in rows}
     last_location_timestamp = max((r.last_timestamp for r in rows), default=None)
-
     return jsonify(
         {
             "logged_in": True,
             "username": current_user.username,
             "_permissions": permissions,
-            "recording_ids": recording_ids,
+            "recordings": recordings,
             "location_share_secret": current_user.location_share_secret,
             "last_location_timestamp": last_location_timestamp,
         }
@@ -251,11 +246,6 @@ def unshare_location():
         return jsonify({"error": "Not authenticated"}), 401
 
     try:
-        # Delete the non-tracking location for this user
-        db.session.execute(
-            text("DELETE FROM user_locations WHERE user_id = :user_id AND tracking = FALSE"), {"user_id": current_user.id}
-        )
-
         # Clear the share secret
         current_user.location_share_secret = None
         db.session.commit()

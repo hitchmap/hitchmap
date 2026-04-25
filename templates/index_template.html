@@ -48,6 +48,7 @@
         <div id="flex-break-1" class="flex-break" style="display:none"></div>
         <div id="flex-break-2" class="flex-break" style="display:none"></div>
         <div id="flex-break-3" class="flex-break" style="display:none"></div>
+        <div id="flex-break-4" class="flex-break" style="display:none"></div>
 
         <!-- Recording picker control: shown only when body.has-multiple-recordings -->
         <div id="recording-picker-control" class="leaflet-bar horizontal-button">
@@ -65,6 +66,8 @@
         </div>
         <div id="location-tracking-control" class="leaflet-bar horizontal-button">
             <a href="javascript:void(0);" id="start-tracking">🔴 Record Trip</a>
+            <a href="javascript:void(0);" id="tracking-status-permissions" class="tracking-status-btn">⏳ Requesting permissions…</a>
+            <a href="javascript:void(0);" id="tracking-status-locating"    class="tracking-status-btn">⏳ Getting location…</a>
             <a href="javascript:void(0);" id="stop-tracking">⬛ Stop Tracking</a>
             <a href="javascript:void(0);" id="share-location">↗️ Share Location</a>
             <a href="javascript:void(0);" id="unshare-location">❌️ Unshare Location</a>
@@ -165,7 +168,8 @@
 
         <p>Thank you for your contribution!</p>
         <p>Your review will appear on the map within 10 minutes. <a id="refresh-pending" href="javascript:;">Refreshing</a> may be needed.</p>
-        <button id="jump-to-destination">Jump to review's destination</button>
+        <button id="jump-to-review" style="margin-bottom: 0;">Jump to reviewed spot</button>
+        <button id="jump-to-destination">Jump to ride's destination</button>
     </div>
     <div class="sidebar failed">
         <h3>Failed!</h3>

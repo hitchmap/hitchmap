@@ -154,7 +154,7 @@ firstUserPromise.then(user => {
     createUserMarkers();
     document.querySelector('#account-control a').innerText = '👤 ' + user.username;
     document.body.classList.toggle('has-recordings', user.last_location_timestamp);
-    initRecordingPicker(user.recording_ids, user.last_location_timestamp);
+    initRecordingPicker(user.recordings, user.last_location_timestamp);
 })
 
 setInterval(async () => {
@@ -163,7 +163,7 @@ setInterval(async () => {
     createUserMarkers();
     document.querySelector('#account-control a').innerText = '👤 ' + user.username;
     document.body.classList.toggle('has-locations', user.last_location_timestamp);
-    initRecordingPicker(user.recording_ids, user.last_location_timestamp);
+    initRecordingPicker(user.recordings, user.last_location_timestamp);
 }, 60000)
 
 let allMarkerGroup = L.layerGroup(allMarkers)
@@ -224,13 +224,13 @@ addAsLeafletControl('#account-control');
 // Filter button
 addAsLeafletControl('#filter-control');
 
-// Optional layout break
+// Layout break
 addAsLeafletControl('#flex-break-1');
 
 // Remove filter buttons (existing control)
 map.addControl(removeFilterButtons);
 
-// Optional layout break
+// Layout break
 addAsLeafletControl('#flex-break-2');
 
 // Tile toggle button
@@ -307,18 +307,19 @@ refreshPending.onclick = async e => {
     location.reload()
 }
 
-if (window.Capacitor) {
-    addAsLeafletControl('#location-tracking-control', 'bottomleft');
-    let bugReport = addAsLeafletControl('#bugreport-control', 'bottomright');
-    bugReport.onclick = () => alert('Please email info@hitchmap.com with your bugs!')
-}
-
 // Recording picker control (visibility governed by body.has-multiple-recordings via CSS)
 addAsLeafletControl('#recording-picker-control', 'bottomleft');
 
 // GPS and geocoder remain in the same sequence
 // L.control.locate().addTo(map);
 addGeocoder(map);
+
+if (window.Capacitor) {
+    addAsLeafletControl('#location-tracking-control', 'bottomleft');
+    addAsLeafletControl('#flex-break-4');
+    let bugReport = addAsLeafletControl('#bugreport-control');
+    bugReport.onclick = () => alert('Please email info@hitchmap.com with your bugs!')
+}
 
 // Optional layout break
 addAsLeafletControl('#flex-break-3');
@@ -713,8 +714,9 @@ function navigate() {
         clear()
         bar('.sidebar.success')
         // showing is handled in pending.js
-        const jumpBtn = document.querySelector('#jump-to-destination');
-        jumpBtn.style.display = 'none';
+        const jumpReviewBtn = document.querySelector('#jump-to-review');
+        const jumpDestinationBtn = document.querySelector('#jump-to-destination');
+        jumpReviewBtn.style.display = jumpDestinationBtn.style.display = 'none';
     }
     else {
         clear()

@@ -24,8 +24,6 @@ class UserLocation(db.Model):
     heading = db.Column(db.Float, nullable=True)
     created_at = db.Column(db.DateTime, nullable=True)
 
-    tracking = db.Column(db.Boolean, nullable=False)  # True for tracking, False for sharing only
-
     user = db.relationship("User", backref="locations")
 
 
@@ -42,16 +40,6 @@ class RecordingStop(db.Model):
     recording_id = db.Column(db.String(255), nullable=False, unique=True, index=True)
     user_submitted = db.Column(db.Boolean, nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-
-
-with app.app_context():
-    db.session.execute(
-        text("""
-        CREATE UNIQUE INDEX IF NOT EXISTS user_non_tracking_locations
-        ON user_locations(user_id) WHERE tracking = false;
-        """)
-    )
-    db.session.commit()
 
 
 # ---------------------------------------------------------------------------
@@ -77,16 +65,15 @@ def post_location():
         assert 1700000000000 < data["timestamp"] < 111700000000000
         assert 0 <= data["accuracy"] <= 10000000
         assert data["speed"] is None or 0 <= data["speed"] <= 10000000
-        assert type(data["tracking"]) == bool
 
         sql = text("""
             INSERT OR REPLACE INTO user_locations (
                 user_id, recording_id, latitude, longitude,
-                accuracy, timestamp, speed, tracking, created_at
+                accuracy, timestamp, speed, created_at
             )
             VALUES (
                 :user_id, :recording_id, :latitude, :longitude,
-                :accuracy, :timestamp, :speed, :tracking, CURRENT_TIMESTAMP
+                :accuracy, :timestamp, :speed, CURRENT_TIMESTAMP
             )
         """)
 
@@ -173,51 +160,33 @@ def get_latest_recording(location_share_secret):
     """Get the latest recording for a user via their location share secret"""
     try:
         sql = """
-            WITH latest_entry AS (
-                SELECT
-                    ul.recording_id,
-                    ul.tracking,
-                    ul.timestamp,
-                    u.username
+            WITH latest AS (
+                SELECT ul.user_id, ul.recording_id, u.username
                 FROM user_locations ul
                 INNER JOIN user u ON u.id = ul.user_id
                 WHERE u.location_share_secret = :secret
                 ORDER BY ul.timestamp DESC
                 LIMIT 1
             )
-            SELECT
-                ul.*,
-                le.username
+            SELECT ul.*, latest.username
             FROM user_locations ul
-            INNER JOIN latest_entry le ON ul.recording_id = le.recording_id
-            WHERE
-                ul.user_id = (
-                    SELECT id FROM user WHERE location_share_secret = :secret
-                )
-                AND (
-                    (le.tracking = 0 AND ul.timestamp = le.timestamp)
-                    OR le.tracking = 1
-                )
+            INNER JOIN latest ON ul.user_id = latest.user_id
+            WHERE ul.recording_id = latest.recording_id
             ORDER BY ul.timestamp ASC
         """
-
         df = pd.read_sql(sql, db.session.connection(), params={"secret": location_share_secret})
-
         if df.empty:
             return jsonify({"error": "No recordings found for this user"}), 404
-
         locations = df.to_dict(orient="records")
-
         return jsonify(
             {
                 "success": True,
                 "recording_id": locations[0]["recording_id"],
                 "username": locations[0]["username"],
-                "tracking": bool(locations[-1]["tracking"]),
+                "tracking": True,
                 "locations": process_recording(locations),
             }
         ), 200
-
     except Exception as e:
         logger.error(f"Error fetching latest recording: {e}")
         return jsonify({"error": "Failed to fetch recording"}), 500

@@ -38,11 +38,20 @@ export function updatePendingMarkers(active) {
             if ($$('.topbar.visible') || $$('.sidebar.spot-form-container.visible'))
                 return
             location.href = '#success'
-            const jumpBtn = document.querySelector('#jump-to-destination');
+            const jumpReviewBtn = document.querySelector('#jump-to-review');
+
+            // this is only shown on a click, not on direct navigation to #success
+            jumpReviewBtn.style.display = '';
+            jumpReviewBtn.onclick = () => {
+                window.navigateHome();
+                window.map.setView([f.points[0].lat, f.points[0].lng], 15);
+            }
+
+            const jumpDestinationBtn = document.querySelector('#jump-to-destination');
             if (f.points[1].lat != null && f.points[1].lat !== 'nan') {
                 console.log('yeah')
-                jumpBtn.style.display = '';
-                jumpBtn.onclick = () => {
+                jumpDestinationBtn.style.display = '';
+                jumpDestinationBtn.onclick = () => {
                     window.navigateHome();
                     window.map.setView([f.points[1].lat, f.points[1].lng], 15);
                 };

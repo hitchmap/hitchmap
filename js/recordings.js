@@ -2,7 +2,8 @@ import { firstUserPromise, userMarkers } from './user';
 import { UserLocationDisplay } from './user-location-display';
 import { outlinedPolyline, findClosestLocation, closestMarker, polygonDistanceToLatLng, addOutlineRing, C, $$, debounce } from './utils';
 
-let isTracking = false;
+// 'idle' | 'permissions' | 'locating' | 'tracking'
+let trackingState = 'idle';
 let shareSecret;
 let recordingId;
 let receivedLocations = false;
@@ -15,7 +16,6 @@ let localRecordingGroup;
 let localRecordingGroupBack;
 
 // ─── Recording storage ────────────────────────────────────────────────────────
-// Keyed by recording ID; values are location arrays (populated on first need).
 let loadedRecordings = {};
 let knownRecordingIds = [];
 
@@ -47,7 +47,7 @@ async function ensureRecordingLoaded(id) {
 const PICKER_STORAGE_KEY   = 'hitchmap_active_picker_selection';
 const SHOW_ALL_STORAGE_KEY = 'hitchmap_show_all_recordings';
 
-let activePickerSelection = null; // null = not yet initialized
+let activePickerSelection = null;
 
 function loadPickerSelection() {
     try { return localStorage.getItem(PICKER_STORAGE_KEY) || null; } catch { return null; }
@@ -64,11 +64,6 @@ function saveShowAll(on) {
     } catch { /* ignore */ }
 }
 
-/**
- * Persist the selected recording ID.
- * When it's the last completed recording, remove the key so newly created
- * recordings are picked up automatically on the next visit.
- */
 function savePickerSelection(id, completedIds) {
     try {
         const isLast = id === completedIds[completedIds.length - 1];
@@ -78,7 +73,7 @@ function savePickerSelection(id, completedIds) {
 }
 
 export async function initializeUserLocationDisplay() {
-    recordingGroup     = L.layerGroup([], {hitchmapBackground: true}).addTo(window.map);
+    recordingGroup = L.layerGroup([], {hitchmapBackground: true}).addTo(window.map);
     if (!window.Capacitor) return;
 
     userLocationDisplay = window.hitchmapTracker.uld = new UserLocationDisplay(window.map, {
@@ -95,7 +90,7 @@ function generateRecordingId() {
 }
 
 function updateState() {
-    document.body.classList.toggle('tracking', isTracking);
+    document.body.dataset.trackingState = trackingState;
     document.body.classList.toggle('sharing-location', !!shareSecret);
 }
 
@@ -180,18 +175,14 @@ function recordingDate(recId) {
     }
 }
 
-// ─── Recording picker (prev/next arrows + tooltip) ───────────────────────────
+// ─── Recording picker ─────────────────────────────────────────────────────────
 
-/**
- * Entry point called from main.js.
- * Now accepts recording IDs instead of pre-fetched recording data.
- * Lazily fetches individual recordings as the user navigates the picker.
- */
-export async function initRecordingPicker(recordingIds, lastTimestamp) {
+export async function initRecordingPicker(recordings, lastTimestamp) {
     if (lastTimestamp) lastRecordingTimestamp = lastTimestamp;
 
-    if (!recordingIds || recordingIds.length === 0) return;
+    if (!recordings || Object.keys(recordings).length === 0) return;
 
+    const recordingIds = Object.keys(recordings).sort();
     knownRecordingIds = recordingIds;
     const completedIds = recordingIds.filter(id => id !== recordingId);
 
@@ -350,7 +341,7 @@ if (window.Capacitor) {
         lastResumeTime = now;
 
         console.log('App has resumed');
-        if (isTracking || shareSecret) await startService();
+        if (trackingState !== 'idle') await startService();
     });
 
     SplashScreen.hide();
@@ -390,17 +381,14 @@ if (window.Capacitor) {
 
     async function configure() {
         try {
-            // if tracking, keep using the same recordingId as before
-            if (await isServiceRunning() && isTracking) {
+            if (await isServiceRunning() && trackingState !== 'idle') {
                 const oldConfig = await BackgroundGeolocation.getConfig();
                 recordingId = oldConfig.postTemplate.recording_id;
             }
             if (!recordingId) recordingId = generateRecordingId();
 
-            // debug
-
-            // window.useraw = true;
-            const locationProvider = window.useraw ? BackgroundGeolocation.RAW_PROVIDER : BackgroundGeolocation.ACTIVITY_PROVIDER
+            window.useraw = Capacitor.getPlatform() !== 'android';
+            const locationProvider = window.useraw ? BackgroundGeolocation.RAW_PROVIDER : BackgroundGeolocation.ACTIVITY_PROVIDER;
 
             await BackgroundGeolocation.configure({
                 stationaryRadius: 0,
@@ -429,11 +417,7 @@ if (window.Capacitor) {
                     accuracy:     "@accuracy",
                     timestamp:    "@time",
                     speed:        "@speed",
-                    // heading:      "@heading",
                     bearing:      "@bearing",
-                    activity: "@activity",
-                    activity_timestamp: "@activityTimestamp",
-                    tracking:     isTracking,
                     recording_id: recordingId
                 }
             });
@@ -444,18 +428,18 @@ if (window.Capacitor) {
 
     async function startService() {
         let geoStatus = await BackgroundGeolocation.checkStatus();
-        // let notificationStatus = await LocalNotifications.checkPermissions()
-        let notificationStatus = {display: 'granted'}
+        let notificationStatus = await LocalNotifications?.checkPermissions();
+        let canNotify = notificationStatus && notificationStatus.display !== 'granted';
 
-        if (notificationStatus.display !== 'granted' || !geoStatus.hasPermissions) {
+        if (canNotify || !geoStatus.hasPermissions) {
             if (!shownAlert) {
-                alert("To track your trip, you must give permissions for both notifications and exact location usage. We will only use notifications to keep the app alive while your phone is on standby.")
+                alert("To track your trip, you must give permissions for both notifications and exact location usage. We will only use notifications to keep the app alive while your phone is on standby.");
                 shownAlert = true;
             }
         }
 
         if (!geoStatus.locationServicesEnabled) {
-            alert('Enable GPS to get an accurate recording.')
+            alert('Enable GPS to get an accurate recording.');
         }
 
         await configure();
@@ -489,55 +473,97 @@ if (window.Capacitor) {
     }
 
     async function startTracking() {
-        isTracking = true;
+        trackingState = 'permissions';
         updateState();
+
         await startService();
+
+        trackingState = 'locating';
+        updateState();
+
         startRecordingPoll();
     }
 
     async function stopTracking() {
+        if (shareSecret && !confirm('You are currently sharing your location. Stopping tracking will also stop sharing. Continue?')) {
+            return;
+        }
+
         const completedId = recordingId;
 
-        isTracking = false;
+        trackingState = 'idle';
+
+        if (shareSecret) {
+            await stopSharing();
+        }
+
         updateState();
         recordingId = null;
 
-        if (!shareSecret) {
-            stopRecordingPoll();
-            await stopService();
-        } else {
-            await configure();
-        }
+        stopRecordingPoll();
+        await stopService();
 
         if (completedId) {
-            // Fetch the final state of the just-completed recording
-            await fetchRecording(completedId);
+            const data = await fetchRecording(completedId);
 
-            // Ensure it's in the known list
-            if (!knownRecordingIds.includes(completedId)) {
-                knownRecordingIds.push(completedId);
+            if (data?.locations?.length) {
+                const minTs = data.locations[0].timestamp;
+                const ageMs = Date.now() - minTs;
+
+                if (ageMs < 10 * 60 * 1000) {
+                    // Recording is less than 10 minutes old — delete it automatically
+                    try {
+                        const res = await fetch(`/delete-recording/${completedId}`, {
+                            method: 'DELETE',
+                            credentials: 'include'
+                        });
+                        const result = await res.json();
+                        if (result.success) {
+                            delete loadedRecordings[completedId];
+                            knownRecordingIds = knownRecordingIds.filter(id => id !== completedId);
+                            alert('Recording was less than 10 minutes long and has been automatically deleted.');
+                            return;
+                        }
+                    } catch (e) {
+                        console.error('Failed to auto-delete short recording:', e);
+                    }
+                }
+                else {
+                    if (!knownRecordingIds.includes(completedId)) {
+                        knownRecordingIds.push(completedId);
+                    }
+
+                    activePickerSelection = completedId;
+                    savePickerSelection(activePickerSelection, knownRecordingIds);
+                    await applyAndRender(knownRecordingIds);
+                }
             }
 
-            // Switch picker selection to the newly completed recording
-            activePickerSelection = completedId;
-
-            savePickerSelection(activePickerSelection, knownRecordingIds);
-            await applyAndRender(knownRecordingIds);
+            // Prune local locations that are now represented in the synced recording
+            if (lastRecordingTimestamp) {
+                localLocationsList = localLocationsList.filter(
+                    loc => loc.time > lastRecordingTimestamp
+                );
+            }
+            localLocationsList.length = 0;
+            drawLocalRecordings();
         }
     }
 
     async function startSharing() {
         try {
             if (!shareSecret) {
-                const response = await fetch('/share-location', { method: 'POST'});
+                const response = await fetch('/share-location', { method: 'POST' });
                 const data     = await response.json();
                 if (data.success) shareSecret = data.location_share_secret;
             }
 
+            if (trackingState === 'idle') {
+                await startTracking();
+            }
+
             const shareUrl = `${location.origin}/?share-secret=${shareSecret}`;
             updateState();
-            await startService();
-            startRecordingPoll();
             Share.share({ url: shareUrl });
         } catch (error) {
             console.error('Error starting share:', error);
@@ -550,7 +576,7 @@ if (window.Capacitor) {
             await fetch('/unshare-location', { method: 'POST', credentials: 'include' });
             shareSecret = false;
             updateState();
-            if (!isTracking) {
+            if (trackingState === 'idle') {
                 stopRecordingPoll();
                 await stopService();
             }
@@ -568,6 +594,11 @@ if (window.Capacitor) {
             if (document.body.dataset.centeringMode !== 'shared')
                 document.body.dataset.centeringMode = 'user';
             receivedLocations = true;
+
+            if (trackingState === 'locating') {
+                trackingState = 'tracking';
+                updateState();
+            }
         }
         localLocationsList.push(location);
         drawLocalRecordings();
@@ -590,17 +621,25 @@ if (window.Capacitor) {
 
     document.getElementById('start-tracking')?.addEventListener('click', startTracking);
     document.getElementById('stop-tracking')?.addEventListener('click', stopTracking);
+    document.getElementById('tracking-status-permissions')?.addEventListener('click', stopTracking);
+    document.getElementById('tracking-status-locating')?.addEventListener('click', stopTracking);
     document.getElementById('share-location')?.addEventListener('click', startSharing);
     document.getElementById('send-location')?.addEventListener('click', startSharing);
     document.getElementById('unshare-location')?.addEventListener('click', stopSharing);
 
     firstUserPromise.then(async (user) => {
-        const isRunning = await isServiceRunning();
-        isTracking  = isRunning && (await BackgroundGeolocation.getConfig()).postTemplate.tracking === true;
+        const running = await isServiceRunning();
         shareSecret = shareSecret || user.location_share_secret;
 
-        if (shareSecret || isTracking)   await startService();
-        if (!shareSecret && !isTracking) await stopService();
+        if (!running && shareSecret) await stopSharing();
+
+        if (running) {
+            trackingState = 'tracking';
+            await startService();
+        } else {
+            trackingState = 'idle';
+            await stopService();
+        }
 
         updateState();
     });
@@ -609,8 +648,7 @@ if (window.Capacitor) {
         startTracking,
         stopTracking,
         startSharing,
-        stopSharing,
-        isTracking:       () => isTracking,
+        trackingState:    () => trackingState,
         shareSecret:      () => shareSecret,
         recordingId:      () => recordingId,
         isServiceRunning,
@@ -619,18 +657,9 @@ if (window.Capacitor) {
 }
 
 
-/**
- * Build one recording's layers into two groups:
- *   backGroup  – visible layers on 'user-recordings' pane (below markers)
- *   frontGroup – invisible (opacity 0) layers on the default overlay pane
- *                kept solely for Leaflet hit-testing / click events
- *
- * Color scheme:
- *   - Current recording (recordingId)  → red (#e33)
- *   - All other (completed) recordings → blue (#009)
- */
-let recordingMarkers = [];
+// ─── Drawing ──────────────────────────────────────────────────────────────────
 
+let recordingMarkers = [];
 const svgRenderer = L.svg();
 
 export function drawRecordings(recordings, lastTimestamp) {
@@ -667,7 +696,7 @@ export function drawRecordings(recordings, lastTimestamp) {
                 if (type === 'polyline') {
                     layer.setStyle({ color: trackColor, opacity: baseOpacity });
                 } else {
-                    layer.setStyle({ fillColor: trackColor, color: isCurrentRecording ? trackColor : 'white', fillOpacity: markerOpacity });
+                    layer.setStyle({ fillColor: trackColor, color: 'white', fillOpacity: markerOpacity });
                 }
             });
         }
@@ -682,7 +711,6 @@ export function drawRecordings(recordings, lastTimestamp) {
                         resetRecording();
                         recordingLayers.forEach(({ layer }) => layer.remove());
                         recordingLayers.length = 0;
-                        // Remove from local cache
                         delete loadedRecordings[drawRecordingId];
                         knownRecordingIds = knownRecordingIds.filter(id => id !== drawRecordingId);
                     } else {
@@ -741,7 +769,7 @@ export function drawRecordings(recordings, lastTimestamp) {
             return container;
         });
 
-        pl.on('click', e => L.DomEvent.stopPropagation(e))
+        pl.on('click', e => L.DomEvent.stopPropagation(e));
 
         pl.on('popupopen', () => {
             plBack.setStyle({ color: 'red', opacity: 0.8 });
@@ -772,7 +800,6 @@ export function drawRecordings(recordings, lastTimestamp) {
                 weight: 2,
                 interactive: true,
                 renderer: svgRenderer
-                // pane: 'user-recordings',
             });
             recordingLayers.push({ layer: cm, type: 'circleMarker' });
 
@@ -818,7 +845,6 @@ export function drawRecordings(recordings, lastTimestamp) {
             });
 
             cm.addTo(recordingGroup);
-
             cm.bringToFront();
 
             if (loc.nearby_point) {
@@ -842,7 +868,7 @@ export function drawRecordings(recordings, lastTimestamp) {
 
                     if (window.hitch.active == closest) {
                         window._recording = {stops, activeIndex: index, nearbyMarker: closest};
-                        updateRecordingInfo(closest)
+                        updateRecordingInfo(closest);
                     }
 
                     nearbyMarker.addTo(recordingGroup);
@@ -941,7 +967,6 @@ async function applyPickerSelection(selection) {
         if (data?.locations) filtered[selection] = data.locations;
     }
 
-    // Always include the active (current) recording if present
     if (recordingId) {
         const data = await ensureRecordingLoaded(recordingId);
         if (data?.locations) filtered[recordingId] = data.locations;
