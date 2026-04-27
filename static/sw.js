@@ -28,8 +28,28 @@ async function handleFetch(event) {
     const {request} = event;
 
     // Don't cache media files
-    if (['image', 'video', 'audio'].includes(request.destination)) {
+    if (['video', 'audio'].includes(request.destination)) {
         return fetch(request);
+    }
+
+    const IMAGE_CACHE_MAX = 350;
+
+    // Cache N most-recently-requested images
+    if (request.destination === 'image') {
+        const imageCache = await caches.open('hitchmap-images-v1');
+        const cached = await imageCache.match(request.url);
+        if (cached) return cached;
+
+        const fetched = await fetch(request);
+        if (fetched.ok) {
+            await imageCache.delete(request.url);
+            await imageCache.put(request.url, fetched.clone());
+            const keys = await imageCache.keys();
+            if (keys.length > IMAGE_CACHE_MAX) {
+                await Promise.all(keys.slice(0, keys.length - IMAGE_CACHE_MAX).map((key) => imageCache.delete(key)));
+            }
+        }
+        return fetched;
     }
 
     // Helper function to strip query parameters from a URL

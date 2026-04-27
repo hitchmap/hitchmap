@@ -60,6 +60,9 @@ def experience():
     assert -180 <= lon <= 180
     assert (-90 <= dest_lat <= 90 and -180 <= dest_lon <= 180) or (math.isnan(dest_lat) and math.isnan(dest_lon))
 
+    recording = None if data["recording"] == "" else data["recording"]
+    assert recording is None or recording.startswith("rec_")
+
     for _i in range(10):
         resp = requests.get(
             "https://nominatim.openstreetmap.org/reverse",
@@ -112,6 +115,7 @@ def experience():
                 "signal": signal,
                 "ride_datetime": datetime_ride,
                 "user_id": current_user.id if not current_user.is_anonymous else None,
+                "recording": recording,
             }
         ],
         index=[pid],

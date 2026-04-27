@@ -825,7 +825,7 @@ export function drawRecordings(recordings, lastTimestamp) {
                     window.map.setView([loc.latitude, loc.longitude], 17, { animate: true });
                     cm.closePopup();
                     document.querySelector('#addspot-control a')?.click();
-                    window._recording = {stops, activeIndex: index};
+                    window._recording = {stops, activeIndex: index, id: drawRecordingId};
                 });
                 return container;
             });
@@ -862,12 +862,12 @@ export function drawRecordings(recordings, lastTimestamp) {
                         renderer: svgRenderer,
                     });
                     nearbyMarker.on('click', e => {
-                        window._recording = {stops, activeIndex: index, nearbyMarker: closest};
+                        window._recording = {stops, activeIndex: index, nearbyMarker: closest, id: drawRecordingId};
                         closest.fire('click', e);
                     });
 
                     if (window.hitch.active == closest) {
-                        window._recording = {stops, activeIndex: index, nearbyMarker: closest};
+                        window._recording = {stops, activeIndex: index, nearbyMarker: closest, id: drawRecordingId};
                         updateRecordingInfo(closest);
                     }
 
