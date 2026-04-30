@@ -118,6 +118,7 @@ export function summaryText(row) {
 }
 
 export function closestMarker(markers, lat, lon) {
+    if (!markers.length) return undefined;
     return markers
         .map(marker => {
             const mll = marker.getLatLng();
@@ -317,4 +318,26 @@ export function removeOutlineRing(marker) {
     delete marker._updatePath;   // fall back to prototype
     marker.redraw();
     return marker;
+}
+
+export function throttleWithTrailing(fn, delay) {
+    let lastCall = 0;
+    let trailingTimer = null;
+
+    return function (...args) {
+        const now = Date.now();
+        const remaining = delay - (now - lastCall);
+
+        clearTimeout(trailingTimer);
+
+        if (remaining <= 0) {
+            lastCall = now;
+            fn.apply(this, args);
+        } else {
+            trailingTimer = setTimeout(() => {
+                lastCall = Date.now();
+                fn.apply(this, args);
+            }, remaining);
+        }
+    };
 }

@@ -34,6 +34,9 @@ module.exports = {
             // Optional UI polish [1]
             backgroundColor: '#003366'
         },
+        BackgroundGeolocation: {
+            contentAuthority: "com.hitchmap.app.bglocprovider"
+        },
         "CapacitorHttp": {
             "enabled": true
         },

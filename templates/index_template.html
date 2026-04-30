@@ -298,4 +298,21 @@
      {{ hitch_script | safe }}
     </script>
     <script async defer src="https://scripts.simpleanalyticscdn.com/latest.js"></script>
+
+    <div id="app-announcement-overlay" class="app-overlay">
+        <div class="app-overlay-content">
+            <h3>Hitchmap App: call for testers</h3>
+            <p>The alpha version of the Hitchmap app is available now. It's faster, uses less data, and can be used to record your trips!</p>
+            <a href="/app-announcement.html" class="app-link-btn">Check it out</a>
+
+            <div class="app-overlay-footer">
+                <label>
+                    <input type="checkbox" id="dont-show-app-again"> Don't show again
+                </label>
+                <button id="close-app-overlay">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/app-announcement.js"></script>
 {% endblock %}

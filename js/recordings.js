@@ -1,6 +1,6 @@
 import { firstUserPromise, userMarkers } from './user';
 import { UserLocationDisplay } from './user-location-display';
-import { outlinedPolyline, findClosestLocation, closestMarker, polygonDistanceToLatLng, addOutlineRing, C, $$, debounce } from './utils';
+import { outlinedPolyline, findClosestLocation, closestMarker, polygonDistanceToLatLng, addOutlineRing, C, $$, throttleWithTrailing } from './utils';
 
 // 'idle' | 'permissions' | 'locating' | 'tracking'
 let trackingState = 'idle';
@@ -387,7 +387,7 @@ if (window.Capacitor) {
             }
             if (!recordingId) recordingId = generateRecordingId();
 
-            window.useraw = Capacitor.getPlatform() !== 'android';
+            window.useraw = window.Capacitor.getPlatform() !== 'android';
             const locationProvider = window.useraw ? BackgroundGeolocation.RAW_PROVIDER : BackgroundGeolocation.ACTIVITY_PROVIDER;
 
             await BackgroundGeolocation.configure({
@@ -416,9 +416,9 @@ if (window.Capacitor) {
                     longitude:    "@longitude",
                     accuracy:     "@accuracy",
                     timestamp:    "@time",
-                    speed:        "@speed",
                     bearing:      "@bearing",
-                    recording_id: recordingId
+                    recording_id: recordingId,
+                    platform: window.Capacitor.getPlatform()
                 }
             });
         } catch (error) {
@@ -429,9 +429,9 @@ if (window.Capacitor) {
     async function startService() {
         let geoStatus = await BackgroundGeolocation.checkStatus();
         let notificationStatus = await LocalNotifications?.checkPermissions();
-        let canNotify = notificationStatus && notificationStatus.display !== 'granted';
+        let willAskForNotify = window.Capacitor.getPlatform() === 'android' && notificationStatus && notificationStatus.display !== 'granted';
 
-        if (canNotify || !geoStatus.hasPermissions) {
+        if (willAskForNotify || !geoStatus.hasPermissions) {
             if (!shownAlert) {
                 alert("To track your trip, you must give permissions for both notifications and exact location usage. We will only use notifications to keep the app alive while your phone is on standby.");
                 shownAlert = true;
@@ -585,34 +585,33 @@ if (window.Capacitor) {
         }
     }
 
+    const throttledDraw = throttleWithTrailing(async (location) => {
+        drawLocalRecordings();
+        userLocationDisplay.enable();
+        userLocationDisplay.updateLocation(location);
+        if (document.body.dataset.centeringMode === 'user') {
+            window.map.setView([location.latitude, location.longitude], window.map.getZoom(), {
+                animate: true, duration: 0.5
+            });
+        }
+    }, 500);
+
     BackgroundGeolocation.on('location', async (location) => {
+        localLocationsList.push(location);
         if (!receivedLocations) {
+            receivedLocations = true;
             if (await isServiceRunning()) {
                 document.body.classList.add('has-user-location');
                 await startCompassWatch();
             }
             if (document.body.dataset.centeringMode !== 'shared')
                 document.body.dataset.centeringMode = 'user';
-            receivedLocations = true;
-
             if (trackingState === 'locating') {
                 trackingState = 'tracking';
                 updateState();
             }
         }
-        localLocationsList.push(location);
-        drawLocalRecordings();
-
-        console.log(lastCompassHeading);
-
-        userLocationDisplay.enable();
-        userLocationDisplay.updateLocation(location);
-
-        if (document.body.dataset.centeringMode === 'user') {
-            window.map.setView([location.latitude, location.longitude], window.map.getZoom(), {
-                animate: true, duration: 0.5
-            });
-        }
+        throttledDraw(location);
     });
 
     BackgroundGeolocation.on('error', (error) => {

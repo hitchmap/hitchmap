@@ -64,16 +64,15 @@ def post_location():
         assert -180 <= data["longitude"] <= 180
         assert 1700000000000 < data["timestamp"] < 111700000000000
         assert 0 <= data["accuracy"] <= 10000000
-        assert data["speed"] is None or 0 <= data["speed"] <= 10000000
 
         sql = text("""
             INSERT OR REPLACE INTO user_locations (
                 user_id, recording_id, latitude, longitude,
-                accuracy, timestamp, speed, created_at
+                accuracy, timestamp, created_at
             )
             VALUES (
                 :user_id, :recording_id, :latitude, :longitude,
-                :accuracy, :timestamp, :speed, CURRENT_TIMESTAMP
+                :accuracy, :timestamp, CURRENT_TIMESTAMP
             )
         """)
 

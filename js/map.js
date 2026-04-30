@@ -316,9 +316,9 @@ addGeocoder(map);
 
 if (window.Capacitor) {
     addAsLeafletControl('#location-tracking-control', 'bottomleft');
-    addAsLeafletControl('#flex-break-4');
-    let bugReport = addAsLeafletControl('#bugreport-control');
-    bugReport.onclick = () => alert('Please email info@hitchmap.com with your bugs!')
+    // addAsLeafletControl('#flex-break-4');
+    // let bugReport = addAsLeafletControl('#bugreport-control');
+    // bugReport.onclick = () => alert('Please email info@hitchmap.com with your bugs!')
 }
 
 // Optional layout break
