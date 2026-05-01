@@ -157,38 +157,34 @@ def get_recording(recording_id):
 @app.route("/latest-recording/<location_share_secret>", methods=["GET"])
 def get_latest_recording(location_share_secret):
     """Get the latest recording for a user via their location share secret"""
-    try:
-        sql = """
-            WITH latest AS (
-                SELECT ul.user_id, ul.recording_id, u.username
-                FROM user_locations ul
-                INNER JOIN user u ON u.id = ul.user_id
-                WHERE u.location_share_secret = :secret
-                ORDER BY ul.timestamp DESC
-                LIMIT 1
-            )
-            SELECT ul.*, latest.username
+    sql = """
+        WITH latest AS (
+            SELECT ul.user_id, ul.recording_id, u.username
             FROM user_locations ul
-            INNER JOIN latest ON ul.user_id = latest.user_id
-            WHERE ul.recording_id = latest.recording_id
-            ORDER BY ul.timestamp ASC
-        """
-        df = pd.read_sql(sql, db.session.connection(), params={"secret": location_share_secret})
-        if df.empty:
-            return jsonify({"error": "No recordings found for this user"}), 404
-        locations = df.to_dict(orient="records")
-        return jsonify(
-            {
-                "success": True,
-                "recording_id": locations[0]["recording_id"],
-                "username": locations[0]["username"],
-                "tracking": True,
-                "locations": process_recording(locations),
-            }
-        ), 200
-    except Exception as e:
-        logger.error(f"Error fetching latest recording: {e}")
-        return jsonify({"error": "Failed to fetch recording"}), 500
+            INNER JOIN user u ON u.id = ul.user_id
+            WHERE u.location_share_secret = :secret
+            ORDER BY ul.timestamp DESC
+            LIMIT 1
+        )
+        SELECT ul.*, latest.username
+        FROM user_locations ul
+        INNER JOIN latest ON ul.user_id = latest.user_id
+        WHERE ul.recording_id = latest.recording_id
+        ORDER BY ul.timestamp ASC
+    """
+    df = pd.read_sql(sql, db.session.connection(), params={"secret": location_share_secret})
+    if df.empty:
+        return jsonify({"error": "No recordings found for this user"}), 404
+    locations = df
+    return jsonify(
+        {
+            "success": True,
+            "recording_id": locations.loc[0, "recording_id"],
+            "username": locations.loc[0, "username"],
+            "tracking": True,
+            "locations": process_recording(locations).to_dict(orient="records"),
+        }
+    ), 200
 
 
 @app.route("/delete-recording/<recording_id>", methods=["DELETE"])

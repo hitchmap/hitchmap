@@ -1,6 +1,6 @@
 import { firstUserPromise, userMarkers } from './user';
 import { UserLocationDisplay } from './user-location-display';
-import { outlinedPolyline, findClosestLocation, closestMarker, polygonDistanceToLatLng, addOutlineRing, C, $$, throttleWithTrailing } from './utils';
+import { outlinedPolyline, findClosestLocation, closestMarker, polygonDistanceToLatLng, addOutlineRing, C, $$, throttleWithTrailing} from './utils';
 
 // 'idle' | 'permissions' | 'locating' | 'tracking'
 let trackingState = 'idle';
@@ -522,7 +522,6 @@ if (window.Capacitor) {
                             delete loadedRecordings[completedId];
                             knownRecordingIds = knownRecordingIds.filter(id => id !== completedId);
                             alert('Recording was less than 10 minutes long and has been automatically deleted.');
-                            return;
                         }
                     } catch (e) {
                         console.error('Failed to auto-delete short recording:', e);
@@ -539,12 +538,6 @@ if (window.Capacitor) {
                 }
             }
 
-            // Prune local locations that are now represented in the synced recording
-            if (lastRecordingTimestamp) {
-                localLocationsList = localLocationsList.filter(
-                    loc => loc.time > lastRecordingTimestamp
-                );
-            }
             localLocationsList.length = 0;
             drawLocalRecordings();
         }
@@ -724,23 +717,15 @@ export function drawRecordings(recordings, lastTimestamp) {
             color: trackColor,
             weight: isCurrentRecording ? 2 : 1,
             opacity: baseOpacity,
-            pane: 'user-recordings',
-            interactive: false,
+            pane: 'user-recordings', // blocked by the main pane
+            interactive: true, // interactions are only fired from map.onclick in map.js
             outline: true,
             outlineColor,
             outlineWidth: 1,
         });
-        plBack.addTo(backGroup);
         recordingLayers.push({ layer: plBack, type: 'polyline' });
 
-        const latLngs = locations.map(loc => [loc.latitude, loc.longitude]);
-        const pl = L.polyline(latLngs, {
-            weight: 3,
-            opacity: 0,
-            fillOpacity: 0,
-        });
-
-        pl.bindPopup((layer) => {
+        plBack.bindPopup((layer) => {
             const anchor = layer.getPopup()?.getLatLng();
             const loc    = anchor ? findClosestLocation(locations, anchor) : null;
 
@@ -757,20 +742,22 @@ export function drawRecordings(recordings, lastTimestamp) {
                 <button class="add-review-btn" style="margin-top:6px;color:white;background:#38a169;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;">Add review</button>
             `;
             container.querySelector('.delete-recording-btn').addEventListener('click', () => {
-                deleteRecording(() => pl.closePopup());
+                deleteRecording(() => plBack.closePopup());
             });
             container.querySelector('.add-review-btn').addEventListener('click', () => {
                 const latlng = layer.getPopup()?.getLatLng() ?? layer.getCenter();
                 window.map.setView([latlng.lat, latlng.lng], 17, { animate: true });
-                pl.closePopup();
+                plBack.closePopup();
                 document.querySelector('#addspot-control a')?.click();
             });
             return container;
         });
 
-        pl.on('click', e => L.DomEvent.stopPropagation(e));
+        plBack.on('click', e => {
+            L.DomEvent.stopPropagation(e)
+        });
 
-        pl.on('popupopen', () => {
+        plBack.on('popupopen', () => {
             plBack.setStyle({ color: 'red', opacity: 0.8 });
             recordingLayers.forEach(({ layer, type }) => {
                 if (layer === plBack) return;
@@ -779,12 +766,12 @@ export function drawRecordings(recordings, lastTimestamp) {
             });
         });
 
-        pl.on('popupclose', () => {
+        plBack.on('popupclose', () => {
             plBack.setStyle({ color: trackColor, opacity: baseOpacity });
             resetRecording();
         });
 
-        pl.addTo(recordingGroup);
+        plBack.addTo(recordingGroup);
 
         stops.forEach((loc, index) => {
             const radius        = 5;
@@ -813,7 +800,6 @@ export function drawRecordings(recordings, lastTimestamp) {
                     ${loc.latitude.toFixed(6)}, ${loc.longitude.toFixed(6)}<br>
                     ${isSinglePoint ? `<button class="delete-recording-btn" style="margin-top:6px;color:white;background:#e53e3e;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;">Delete recording</button>` : ''}
                     <button class="add-review-btn" style="margin-top:6px;color:white;background:#38a169;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;">Add review</button>
-                ${JSON.stringify(loc)}
                 `;
                 if (isSinglePoint) {
                     container.querySelector('.delete-recording-btn').addEventListener('click', () => {
@@ -893,7 +879,6 @@ export function drawRecordings(recordings, lastTimestamp) {
 
         if (hitchmapBackground) {
             plBack.bringToBack();
-            pl.bringToBack();
         }
     });
 }

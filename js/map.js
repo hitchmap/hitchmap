@@ -518,15 +518,16 @@ extendedForm.ontoggle = () => localStorage.setItem('details-open', extendedForm.
 
 // Map click handler for mobile misclicks
 map.on('click', e => {
-    var opened = false;
     if (e.originalEvent.target.closest('.leaflet-control-container')) {
         // Click happened on a control; ignore
         return;
     }
+
+    var opened = false;
+    var layerPoint = map.latLngToLayerPoint(e.latlng)
+
     const isModernTap = e.originalEvent.pointerType === 'touch';
     if ((!document.body.classList.contains('zoomed-out') || $$('body.has-specific-filter')) && (isModernTap || window.innerWidth < 780)) {
-        var layerPoint = map.latLngToLayerPoint(e.latlng)
-
         // Check recordingLayers circle markers for proximity first
         let recordingCircles = recordingGroup.getLayers().filter(l => l instanceof L.CircleMarker)
         let closestCircle = closestMarker(recordingCircles, e.latlng.lat, e.latlng.lng)
@@ -539,16 +540,20 @@ map.on('click', e => {
             if (closest && map.latLngToLayerPoint(closest.getLatLng()).distanceTo(layerPoint) < 20) {
                 opened = true
                 closest.fire('click', e)
-            } else {
-                let userPolylines = recordingGroup.getLayers().filter(e => e.getLatLngs && e.options.interactive !== false)
-                let res = findClosestPolyline(e.latlng, userPolylines)
-                if (res.point && map.latLngToLayerPoint(res.point).distanceTo(layerPoint) < 20) {
-                    opened = true
-                    res.polyline.fire('click', e)
-                }
             }
         }
     }
+
+    // Always check polyline proximity, regardless of filter/zoom/touch — but last
+    if (!opened) {
+        let userPolylines = recordingGroup.getLayers().filter(e => e.getLatLngs && e.options.interactive !== false)
+        let res = findClosestPolyline(e.latlng, userPolylines)
+        if (res.point && map.latLngToLayerPoint(res.point).distanceTo(layerPoint) < 20) {
+            opened = true
+            res.polyline.fire('click', e)
+        }
+    }
+
     if (!opened && $$('.sidebar.visible') && !$$('.sidebar.spot-form-container.visible')) {
         navigateHome()
     }
