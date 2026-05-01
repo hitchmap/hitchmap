@@ -7,7 +7,7 @@ import {fetchCurrentUser, currentUser, firstUserPromise, userMarkerGroup, create
 import {pendingGroup, updatePendingMarkers, addPending, getFuturePending} from './pending';
 import {renderReviews} from './render-reviews';
 import {maybeAddNetworkButton} from './network-button';
-import {drawRecordings, initializeUserLocationDisplay, initRecordingPicker, recordingGroup, updateRecordingInfo, getMarkerForStop } from './recordings';
+import {drawRecordings, initializeUserLocationDisplay, initRecordingPicker, recordingGroup, updateRecordingInfo, getMarkerForStop, recordingLayers } from './recordings';
 
 // Register service worker for offline functionality
 if ("serviceWorker" in navigator) {
@@ -528,13 +528,26 @@ map.on('click', e => {
 
     const isModernTap = e.originalEvent.pointerType === 'touch';
     if ((!document.body.classList.contains('zoomed-out') || $$('body.has-specific-filter')) && (isModernTap || window.innerWidth < 780)) {
-        // Check recordingLayers circle markers for proximity first
-        let recordingCircles = recordingGroup.getLayers().filter(l => l instanceof L.CircleMarker)
+        // Check existing spots matching recording stops for proximity first
+        let recordingCircles = recordingLayers.filter(l => l.type === 'nearby').map(l => l.layer)
         let closestCircle = closestMarker(recordingCircles, e.latlng.lat, e.latlng.lng)
         if (closestCircle && map.latLngToLayerPoint(closestCircle.getLatLng()).distanceTo(layerPoint) < 20) {
             opened = true
             closestCircle.fire('click', e)
-        } else {
+        }
+
+        if (!opened) {
+            // then check recording stops without existing spots
+            let recordingCircles = recordingLayers.filter(l => l.type === 'stop').map(l => l.layer)
+            let closestCircle = closestMarker(recordingCircles, e.latlng.lat, e.latlng.lng)
+            if (closestCircle && map.latLngToLayerPoint(closestCircle.getLatLng()).distanceTo(layerPoint) < 20) {
+                opened = true
+                closestCircle.fire('click', e)
+            }
+        }
+
+        if (!opened) {
+            // then check all stops
             let markers = allMarkers
             var closest = closestMarker(markers, e.latlng.lat, e.latlng.lng)
             if (closest && map.latLngToLayerPoint(closest.getLatLng()).distanceTo(layerPoint) < 20) {
@@ -548,7 +561,7 @@ map.on('click', e => {
     if (!opened) {
         let userPolylines = recordingGroup.getLayers().filter(e => e.getLatLngs && e.options.interactive !== false)
         let res = findClosestPolyline(e.latlng, userPolylines)
-        if (res.point && map.latLngToLayerPoint(res.point).distanceTo(layerPoint) < 20) {
+        if (res.point && map.latLngToLayerPoint(res.point).distanceTo(layerPoint) < 18) {
             opened = true
             res.polyline.fire('click', e)
         }

@@ -8,6 +8,7 @@ let shareSecret;
 let recordingId;
 let receivedLocations = false;
 export let localLocationsList = [];
+export let recordingLayers = [];
 
 let userLocationDisplay;
 let lastRecordingTimestamp;
@@ -679,7 +680,7 @@ export function drawRecordings(recordings, lastTimestamp) {
         const baseOpacity   = isCurrentRecording ? 0.7 : 0.3;
         const markerOpacity = 1;
 
-        const recordingLayers = [];
+        recordingLayers = [];
 
         const stops = locations.filter(loc => loc.seconds_spent > 30);
 
@@ -787,7 +788,7 @@ export function drawRecordings(recordings, lastTimestamp) {
                 interactive: true,
                 renderer: svgRenderer
             });
-            recordingLayers.push({ layer: cm, type: 'circleMarker' });
+            recordingLayers.push({ layer: cm, type: 'stop' });
 
             cm.bindPopup(() => {
                 const container = L.DomUtil.create('div');
@@ -871,7 +872,7 @@ export function drawRecordings(recordings, lastTimestamp) {
                         userDot.addTo(recordingGroup);
                     }
 
-                    recordingLayers.push({ layer: nearbyMarker, type: 'circleMarker' });
+                    recordingLayers.push({ layer: nearbyMarker, type: 'nearby' });
                     setTimeout(() => nearbyMarker.bringToFront(), 0);
                 }
             }
