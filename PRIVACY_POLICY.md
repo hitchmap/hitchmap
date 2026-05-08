@@ -1,7 +1,3 @@
-Here's the privacy policy updated to be compatible with Play Store and App Store requirements:
-
----
-
 # Hitchmap Privacy Policy
 
 *We aim to keep this privacy policy as clear, concise, and easy to understand as possible. We are committed to being transparent and open. This policy explains how we collect information about you, and what we do with that information once we have it.*
