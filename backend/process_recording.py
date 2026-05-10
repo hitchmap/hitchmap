@@ -112,7 +112,7 @@ from scipy.ndimage import maximum_filter1d, binary_opening
 def merge_soliciting_events(
     df,
     # "Fast burst" detector
-    fast_window=5,  # 25 seconds
+    fast_window=7,  # 35 seconds
     fast_speed_kmh=10.0,
     fast_consistency_kmh=8.0,
     fast_linearity=0.6,
@@ -270,8 +270,7 @@ def find_nearby_points(periods_df, db_con):
         candidates = pd.read_sql(
             "SELECT id, lat, lon FROM points"
             " WHERE NOT banned AND revised_by IS NULL"
-            " AND lat BETWEEN :min_lat AND :max_lat"
-            " AND lon BETWEEN :min_lon AND :max_lon",
+            " AND lat BETWEEN :min_lat AND :max_lat AND lon BETWEEN :min_lon AND :max_lon",
             db_con,
             params=dict(min_lat=min_lat, max_lat=max_lat, min_lon=min_lon, max_lon=max_lon),
         )

@@ -24,7 +24,7 @@ export var addSpotPoints = [], // Array to store points when adding new spots
     destMarker // Marker for destination
 
 // Handle marker click events
-function handleMarkerClick(marker, point, e) {
+function handleMarkerClick(marker, e) {
     // Prevent interaction if certain UI elements are visible
     if ($$('.topbar.visible')) {
         map.panTo(marker.getLatLng())
@@ -32,6 +32,8 @@ function handleMarkerClick(marker, point, e) {
     }
 
     if ($$('.sidebar.spot-form-container.visible')) return
+
+    const point = marker.getLatLng();
 
     window.location.hash = `${point.lat},${point.lng}`
 
@@ -143,7 +145,11 @@ for (let row of window.markerData) {
         r._marker = marker;
 
     marker.on('click', function(e) {
-        handleMarkerClick(marker, point, e)
+        // handle touch events in map.onclick, this is not precise enough
+        const isTap = e.originalEvent.pointerType === 'touch' || window.innerWidth < 780;
+        if(isTap) return;
+
+        handleMarkerClick(marker, e)
     })
 
     allMarkers.push(marker)
@@ -518,6 +524,7 @@ extendedForm.ontoggle = () => localStorage.setItem('details-open', extendedForm.
 
 // Map click handler for mobile misclicks
 map.on('click', e => {
+    console.log('clicked')
     if (e.originalEvent.target.closest('.leaflet-control-container')) {
         // Click happened on a control; ignore
         return;
@@ -526,8 +533,8 @@ map.on('click', e => {
     var opened = false;
     var layerPoint = map.latLngToLayerPoint(e.latlng)
 
-    const isModernTap = e.originalEvent.pointerType === 'touch';
-    if ((!document.body.classList.contains('zoomed-out') || $$('body.has-specific-filter')) && (isModernTap || window.innerWidth < 780)) {
+    const isTap = e.originalEvent.pointerType === 'touch' || window.innerWidth < 780;
+    if ((!document.body.classList.contains('zoomed-out') || $$('body.has-specific-filter')) && isTap) {
         // Check existing spots matching recording stops for proximity first
         let recordingCircles = recordingLayers.filter(l => l.type === 'nearby').map(l => l.layer)
         let closestCircle = closestMarker(recordingCircles, e.latlng.lat, e.latlng.lng)
@@ -547,12 +554,12 @@ map.on('click', e => {
         }
 
         if (!opened) {
-            // then check all stops
+            // then check all markers
             let markers = allMarkers
             var closest = closestMarker(markers, e.latlng.lat, e.latlng.lng)
             if (closest && map.latLngToLayerPoint(closest.getLatLng()).distanceTo(layerPoint) < 20) {
                 opened = true
-                closest.fire('click', e)
+                handleMarkerClick(closest, e)
             }
         }
     }

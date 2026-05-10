@@ -5,6 +5,7 @@ import { outlinedPolyline, findClosestLocation, closestMarker, polygonDistanceTo
 // 'idle' | 'permissions' | 'locating' | 'tracking'
 let trackingState = 'idle';
 let shareSecret;
+let syncSecret = '';
 let recordingId;
 let receivedLocations = false;
 export let localLocationsList = [];
@@ -410,7 +411,7 @@ if (window.Capacitor) {
                 url: `${location.origin}/location`,
                 syncUrl: `${location.origin}/location`,
                 syncThreshold: 1,
-                httpHeaders: { "Content-Type": "application/json" },
+                httpHeaders: { "Content-Type": "application/json", "Sync-Secret": syncSecret },
                 maxLocations: 10000,
                 postTemplate: {
                     latitude:     "@latitude",
@@ -624,6 +625,8 @@ if (window.Capacitor) {
         const running = await isServiceRunning();
         shareSecret = shareSecret || user.location_share_secret;
 
+        syncSecret = user.sync_secret;
+
         if (!running && shareSecret) await stopSharing();
 
         if (running) {
@@ -735,7 +738,7 @@ export function drawRecordings(recordings, lastTimestamp) {
                 ${loc ? `
                     ${new Date(loc.timestamp).toLocaleString()}<br>
                     Accuracy: ${loc.accuracy}m<br>
-                    Speed: ${loc.speed}m<br>
+                    Speed: ${Math.round(loc.speed)}km/h<br>
                     ${loc.latitude.toFixed(6)}, ${loc.longitude.toFixed(6)}<br>
                 ` : ''}
                 Stops: ${stops.length}<br>
@@ -797,7 +800,7 @@ export function drawRecordings(recordings, lastTimestamp) {
                     Arrival: ${loc.timestamp ? new Date(loc.timestamp).toLocaleString() : 'N/A'}<br>
                     Time spent: ${Math.ceil(loc.seconds_spent/60)} min<br>
                     Accuracy: ${loc.accuracy}m<br>
-                    Speed: ${loc.speed}m<br>
+                    Speed: ${Math.round(loc.speed)}km/h<br>
                     ${loc.latitude.toFixed(6)}, ${loc.longitude.toFixed(6)}<br>
                     ${isSinglePoint ? `<button class="delete-recording-btn" style="margin-top:6px;color:white;background:#e53e3e;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;">Delete recording</button>` : ''}
                     <button class="add-review-btn" style="margin-top:6px;color:white;background:#38a169;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;">Add review</button>
@@ -849,7 +852,7 @@ export function drawRecordings(recordings, lastTimestamp) {
                     });
                     nearbyMarker.on('click', e => {
                         window._recording = {stops, activeIndex: index, nearbyMarker: closest, id: drawRecordingId};
-                        closest.fire('click', e);
+                        window.handleMarkerClick(closest, e);
                     });
 
                     if (window.hitch.active == closest) {

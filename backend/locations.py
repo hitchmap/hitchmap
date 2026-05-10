@@ -7,7 +7,7 @@ from flask_security import current_user, login_required
 from sqlalchemy import text
 from backend.process_recording import process_recording
 
-from backend.shared import app, db, logger
+from backend.shared import app, db, logger, validate_sync_secret
 
 
 class UserLocation(db.Model):
@@ -48,23 +48,29 @@ class RecordingStop(db.Model):
 
 
 @app.route("/location", methods=["POST"])
-@login_required
 def post_location():
+    # Try sync secret header first (mobile background sync)
+    sync_secret = request.headers.get("Sync-Secret")
+
+    if current_user.is_authenticated:
+        user_id = current_user.id
+    elif sync_secret:
+        user_id = validate_sync_secret(sync_secret)
+        if user_id is None:
+            return jsonify({"error": "Invalid sync secret"}), 401
+    else:
+        return jsonify({"error": "Unauthorized"}), 401
+
     datalist = request.get_json() or []
-
     print(datalist)
-
     if type(datalist) != list:
         datalist = [datalist]
-
     for data in datalist:
-        data["user_id"] = current_user.id
-
+        data["user_id"] = user_id
         assert -90 <= data["latitude"] <= 90
         assert -180 <= data["longitude"] <= 180
         assert 1700000000000 < data["timestamp"] < 111700000000000
         assert 0 <= data["accuracy"] <= 10000000
-
         sql = text("""
             INSERT OR REPLACE INTO user_locations (
                 user_id, recording_id, latitude, longitude,
@@ -75,10 +81,8 @@ def post_location():
                 :accuracy, :timestamp, CURRENT_TIMESTAMP
             )
         """)
-
         db.session.execute(sql, data)
         db.session.commit()
-
     return jsonify({"success": True}), 201
 
 
@@ -138,8 +142,10 @@ def get_recording(recording_id):
         if df.empty:
             return {"error": "Recording not found."}, 404
         simplified = process_recording(df, conn)
-        records = simplified.to_dict("records")
-        if not (len(simplified) > 1 or simplified["seconds_spent"].max() > 300):
+
+        if len(simplified) > 1 or simplified["seconds_spent"].max() > 300:
+            records = simplified.to_dict("records")
+        else:
             records = []
 
     data = {

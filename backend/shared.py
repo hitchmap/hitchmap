@@ -5,6 +5,7 @@ from flask import Flask
 from flask_mailman import Mail
 from flask_sqlalchemy import SQLAlchemy
 import base64
+import time, hmac, hashlib
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -40,6 +41,27 @@ def get_or_create_secret_key():
 
 def short_id_to_long_id(short_id):
     return int.from_bytes(base64.urlsafe_b64decode(short_id), byteorder="big", signed=False)
+
+
+def generate_sync_secret(user_id: int) -> str:
+    window = int(time.time()) // (3600 * 24 * 7)  # changes every week
+    mac = hmac.new(get_or_create_secret_key().encode(), f"{user_id}.{window}".encode(), hashlib.sha256).hexdigest()
+    return f"{user_id}.{mac}"
+
+
+def validate_sync_secret(secret: str) -> int | None:
+    try:
+        user_id_str, mac = secret.split(".", 1)
+        user_id = int(user_id_str)
+    except ValueError:
+        return None
+    # Accept current window and the previous one to avoid edge-case expiry
+    current_window = int(time.time()) // (3600 * 24 * 7)
+    for window in [current_window, current_window - 1]:
+        expected = hmac.new(get_or_create_secret_key().encode(), f"{user_id}.{window}".encode(), hashlib.sha256).hexdigest()
+        if hmac.compare_digest(expected, mac):
+            return user_id
+    return None
 
 
 print(dist_dir)

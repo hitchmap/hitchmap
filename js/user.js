@@ -10,15 +10,8 @@ export async function fetchCurrentUser() {
         currentUser = undefined;
         return currentUser;
     }
-    currentUser = {
-        logged_in: userData.logged_in,
-        username: userData.username,
-        _permissions: userData._permissions,
-        location_share_secret: userData.location_share_secret,
-        last_location_timestamp: userData.last_location_timestamp,
-        recordings: userData.recordings ?? [],
-    };
-    return currentUser;
+    userData.recordings = userData.recordings ?? [];
+    return userData;
 }
 export let firstUserPromise = fetchCurrentUser();
 firstUserPromise.then(user => {

@@ -17,7 +17,7 @@ from backend.process_recording import process_recording
 from wtforms import EmailField, ValidationError
 from flask_security import ForgotPasswordForm
 
-from backend.shared import app, db, logger, EMAIL
+from backend.shared import app, db, logger, EMAIL, generate_sync_secret
 
 # Set up Flask-Security database models
 fsqla.FsModels.set_db_info(db)
@@ -217,6 +217,7 @@ def get_user():
             "recordings": recordings,
             "location_share_secret": current_user.location_share_secret,
             "last_location_timestamp": last_location_timestamp,
+            "sync_secret": generate_sync_secret(current_user.id),
         }
     )
 
