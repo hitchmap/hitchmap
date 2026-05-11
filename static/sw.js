@@ -1,7 +1,7 @@
 // Choose a cache name
 const cacheName = 'hitchmap-v1';
 // List the files to precache
-const precacheResources = ['/', '/favicon.ico', 'https://a.tile.openstreetmap.org/0/0/0.png'];
+const precacheResources = ['/', '/favicon.ico', 'https://tile.openstreetmap.org/0/0/0.png'];
 
 const NETWORK_STATE_CACHE = 'network-state-cache';
 const NETWORK_STATE_URL = 'app://network-state';
