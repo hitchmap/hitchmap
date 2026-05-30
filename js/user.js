@@ -1,4 +1,4 @@
-import { C } from './utils.js';
+import { C, getMarkerCoords } from './utils.js';
 export let currentUser, userRecordings;
 export let userMarkerGroup = L.layerGroup();
 export let userMarkers = [];
@@ -11,7 +11,8 @@ export async function fetchCurrentUser() {
         return currentUser;
     }
     userData.recordings = userData.recordings ?? [];
-    return userData;
+    currentUser = userData;
+    return currentUser;
 }
 export let firstUserPromise = fetchCurrentUser();
 firstUserPromise.then(user => {
@@ -28,7 +29,7 @@ export function createUserMarkers() {
     ).map(review => review._marker);
     for (const marker of userMarkers) {
         marker.bringToFront();
-        const userDot = new L.circleMarker(marker.getLatLng(), {
+        const userDot = new L.circleMarker(getMarkerCoords(marker), {
             stroke: false,
             fill: true,
             radius: 1,

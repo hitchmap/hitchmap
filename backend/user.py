@@ -261,7 +261,25 @@ def unshare_location():
 
 @app.route("/delete-user", methods=["GET"])
 def delete_user():
-    return f"To delete your account please send an email to {EMAIL} with the subject 'Delete my account'."
+    if current_user.is_anonymous:
+        return redirect("/login")
+    return render_template("security/delete_user.html")
+
+
+@app.route("/delete-user", methods=["POST"])
+def delete_user_post():
+    if current_user.is_anonymous:
+        return redirect("/login")
+    try:
+        user = security.datastore.find_user(case_insensitive=True, username=current_user.username)
+        security.datastore.deactivate_user(user)
+        security.datastore.commit()
+        utils.logout_user()
+        return f"User {user.username} deleted their account."
+    except Exception as e:
+        logger.error(f"Error deactivating user {current_user.username}: {str(e)}")
+        db.session.rollback()
+        return "Failed to deactivate account"
 
 
 @app.route("/me", methods=["GET"])

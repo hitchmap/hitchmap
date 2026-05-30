@@ -5,7 +5,7 @@ from datetime import datetime
 from flask import jsonify, request, make_response
 from flask_security import current_user, login_required
 from sqlalchemy import text
-from backend.process_recording import process_recording
+from backend.process_recording import process_recording, find_nearby_points
 
 from backend.shared import app, db, logger, validate_sync_secret
 
@@ -141,10 +141,12 @@ def get_recording(recording_id):
         df = pd.read_sql(query, con=conn, params={"recording_id": recording_id, "user_id": current_user.id})
         if df.empty:
             return {"error": "Recording not found."}, 404
-        simplified = process_recording(df, conn)
+        simplified = process_recording(df)
+        print("db")
+        enriched = find_nearby_points(simplified, conn, recording_id)
 
-        if len(simplified) > 1 or simplified["seconds_spent"].max() > 300:
-            records = simplified.to_dict("records")
+        if len(enriched) > 1 or enriched["seconds_spent"].max() > 300:
+            records = enriched.to_dict("records")
         else:
             records = []
 

@@ -1,6 +1,6 @@
 import { firstUserPromise, userMarkers } from './user';
 import { UserLocationDisplay } from './user-location-display';
-import { outlinedPolyline, findClosestLocation, closestMarker, polygonDistanceToLatLng, addOutlineRing, C, $$, throttleWithTrailing} from './utils';
+import { outlinedPolyline, findClosestLocation, closestMarker, polygonDistanceToLatLng, addOutlineRing, C, $$, throttleWithTrailing, getMarkerCoords} from './utils';
 
 // 'idle' | 'permissions' | 'locating' | 'tracking'
 let trackingState = 'idle';
@@ -22,6 +22,8 @@ let loadedRecordings = {};
 let knownRecordingIds = [];
 
 let shownAlert = false;
+
+let _pickerNavSeq = 0;
 
 async function fetchRecording(id) {
     try {
@@ -68,7 +70,7 @@ function saveShowAll(on) {
 
 function savePickerSelection(id, completedIds) {
     try {
-        const isLast = id === completedIds[completedIds.length - 1];
+        const isLast = id === completedIds[completedIds.length - 1] || id == null;
         if (isLast) localStorage.removeItem(PICKER_STORAGE_KEY);
         else        localStorage.setItem(PICKER_STORAGE_KEY, id);
     } catch { /* ignore */ }
@@ -250,7 +252,11 @@ function bindPickerControls(completedIds) {
         control?.classList.remove('tooltip-open');
         const idx = completedIds.indexOf(activePickerSelection);
         if (idx > 0) {
-            activePickerSelection = completedIds[idx - 1];
+            const seq = ++_pickerNavSeq;
+            const candidate = completedIds[idx - 1];
+            await ensureRecordingLoaded(candidate);
+            if (seq !== _pickerNavSeq) return;          // a newer nav fired — bail
+            activePickerSelection = candidate;
             savePickerSelection(activePickerSelection, completedIds);
             await applyAndRender(completedIds);
             await panToSelection(activePickerSelection);
@@ -262,7 +268,11 @@ function bindPickerControls(completedIds) {
         control?.classList.remove('tooltip-open');
         const idx = completedIds.indexOf(activePickerSelection);
         if (idx < completedIds.length - 1) {
-            activePickerSelection = completedIds[idx + 1];
+            const seq = ++_pickerNavSeq;
+            const candidate = completedIds[idx + 1];
+            await ensureRecordingLoaded(candidate);
+            if (seq !== _pickerNavSeq) return;          // a newer nav fired — bail
+            activePickerSelection = candidate;
             savePickerSelection(activePickerSelection, completedIds);
             await applyAndRender(completedIds);
             await panToSelection(activePickerSelection);
@@ -523,6 +533,7 @@ if (window.Capacitor) {
                         if (result.success) {
                             delete loadedRecordings[completedId];
                             knownRecordingIds = knownRecordingIds.filter(id => id !== completedId);
+                            activePickerSelection = null;
                             alert('Recording was less than 10 minutes long and has been automatically deleted.');
                         }
                     } catch (e) {
@@ -535,10 +546,11 @@ if (window.Capacitor) {
                     }
 
                     activePickerSelection = completedId;
-                    savePickerSelection(activePickerSelection, knownRecordingIds);
-                    await applyAndRender(knownRecordingIds);
                 }
             }
+
+            savePickerSelection(activePickerSelection, knownRecordingIds);
+            await applyAndRender(knownRecordingIds);
 
             localLocationsList.length = 0;
             drawLocalRecordings();
@@ -721,23 +733,30 @@ export function drawRecordings(recordings, lastTimestamp) {
             color: trackColor,
             weight: isCurrentRecording ? 2 : 1,
             opacity: baseOpacity,
-            pane: 'user-recordings', // blocked by the main pane
-            interactive: true, // interactions are only fired from map.onclick in map.js
+            pane: 'user-recordings',
+            interactive: true,
             outline: true,
             outlineColor,
             outlineWidth: 1,
         });
         recordingLayers.push({ layer: plBack, type: 'polyline' });
 
-        plBack.bindPopup((layer) => {
-            const anchor = layer.getPopup()?.getLatLng();
+        plBack.on('click', e => {
+            L.DomEvent.stopPropagation(e);
+
+            if ($$('.topbar.visible')) {
+                return;
+            }
+            if ($$('.sidebar.spot-form-container.visible')) return;
+
+            const anchor = e.latlng;
             const loc    = anchor ? findClosestLocation(locations, anchor) : null;
 
             const container = L.DomUtil.create('div');
             container.innerHTML = `
                 ${loc ? `
                     ${new Date(loc.timestamp).toLocaleString()}<br>
-                    Accuracy: ${loc.accuracy}m<br>
+                    Accuracy: ${Math.round(loc.accuracy)}m<br>
                     Speed: ${Math.round(loc.speed)}km/h<br>
                     ${loc.latitude.toFixed(6)}, ${loc.longitude.toFixed(6)}<br>
                 ` : ''}
@@ -745,34 +764,32 @@ export function drawRecordings(recordings, lastTimestamp) {
                 <button class="delete-recording-btn" style="margin-top:6px;color:white;background:#e53e3e;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;">Delete recording</button>
                 <button class="add-review-btn" style="margin-top:6px;color:white;background:#38a169;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;">Add review</button>
             `;
+
+            const popup = L.popup()
+                .setLatLng(anchor)
+                .setContent(container)
+                .openOn(window.map);
+
             container.querySelector('.delete-recording-btn').addEventListener('click', () => {
-                deleteRecording(() => plBack.closePopup());
+                deleteRecording(() => popup.close());
             });
             container.querySelector('.add-review-btn').addEventListener('click', () => {
-                const latlng = layer.getPopup()?.getLatLng() ?? layer.getCenter();
-                window.map.setView([latlng.lat, latlng.lng], 17, { animate: true });
-                plBack.closePopup();
+                window.map.setView([anchor.lat, anchor.lng], 17, { animate: true });
+                popup.close();
                 document.querySelector('#addspot-control a')?.click();
             });
-            return container;
-        });
 
-        plBack.on('click', e => {
-            L.DomEvent.stopPropagation(e)
-        });
-
-        plBack.on('popupopen', () => {
             plBack.setStyle({ color: 'red', opacity: 0.8 });
             recordingLayers.forEach(({ layer, type }) => {
                 if (layer === plBack) return;
                 if (type === 'polyline') layer.setStyle({ color: 'purple', opacity: 0.7 });
                 else                    layer.setStyle({ fillColor: 'purple', color: 'purple', fillOpacity: 0.7 });
             });
-        });
 
-        plBack.on('popupclose', () => {
-            plBack.setStyle({ color: trackColor, opacity: baseOpacity });
-            resetRecording();
+            popup.on('remove', () => {
+                plBack.setStyle({ color: trackColor, opacity: baseOpacity });
+                resetRecording();
+            });
         });
 
         plBack.addTo(recordingGroup);
@@ -793,44 +810,55 @@ export function drawRecordings(recordings, lastTimestamp) {
             });
             recordingLayers.push({ layer: cm, type: 'stop' });
 
-            cm.bindPopup(() => {
+            cm.on('click', e => {
+                L.DomEvent.stopPropagation(e);
+
+                if ($$('.topbar.visible')) {
+                    window.map.panTo(cm.getLatLng());
+                    return;
+                }
+                if ($$('.sidebar.spot-form-container.visible')) return;
+
                 const container = L.DomUtil.create('div');
                 container.innerHTML = `
                     Stop ${index + 1} of ${stops.length}<br>
                     Arrival: ${loc.timestamp ? new Date(loc.timestamp).toLocaleString() : 'N/A'}<br>
                     Time spent: ${Math.ceil(loc.seconds_spent/60)} min<br>
-                    Accuracy: ${loc.accuracy}m<br>
+                    Accuracy: ${Math.round(loc.accuracy)}m<br>
                     Speed: ${Math.round(loc.speed)}km/h<br>
                     ${loc.latitude.toFixed(6)}, ${loc.longitude.toFixed(6)}<br>
                     ${isSinglePoint ? `<button class="delete-recording-btn" style="margin-top:6px;color:white;background:#e53e3e;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;">Delete recording</button>` : ''}
                     <button class="add-review-btn" style="margin-top:6px;color:white;background:#38a169;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;">Add review</button>
                 `;
+
+                const popup = L.popup()
+                    .setLatLng(cm.getLatLng())
+                    .setContent(container)
+                    .openOn(window.map);
+
                 if (isSinglePoint) {
                     container.querySelector('.delete-recording-btn').addEventListener('click', () => {
-                        deleteRecording(() => cm.closePopup());
+                        deleteRecording(() => popup.close());
                     });
                 }
                 container.querySelector('.add-review-btn').addEventListener('click', () => {
                     window.map.setView([loc.latitude, loc.longitude], 17, { animate: true });
-                    cm.closePopup();
+                    popup.close();
                     document.querySelector('#addspot-control a')?.click();
                     window._recording = {stops, activeIndex: index, id: drawRecordingId};
                 });
-                return container;
-            });
 
-            cm.on('popupopen', () => {
                 cm.setStyle({ fillColor: 'red', color: 'red', fillOpacity: 0.9 });
                 recordingLayers.forEach(({ layer, type }) => {
                     if (layer === cm) return;
                     if (type === 'polyline') layer.setStyle({ color: 'purple', opacity: 0.7 });
                     else                    layer.setStyle({ fillColor: 'purple', color: 'purple', fillOpacity: 0.7 });
                 });
-            });
 
-            cm.on('popupclose', () => {
-                cm.setStyle({ fillColor: trackColor, color: isCurrentRecording ? trackColor : 'white', fillOpacity: markerOpacity });
-                resetRecording();
+                popup.on('remove', () => {
+                    cm.setStyle({ fillColor: trackColor, color: isCurrentRecording ? trackColor : 'white', fillOpacity: markerOpacity });
+                    resetRecording();
+                });
             });
 
             cm.addTo(recordingGroup);
@@ -841,7 +869,7 @@ export function drawRecordings(recordings, lastTimestamp) {
                 if (closest) {
                     cm.setStyle({fillOpacity: 0.5, opacity: 0.5, radius: 4});
 
-                    const nearbyMarker = L.circleMarker(closest.getLatLng(), {
+                    const nearbyMarker = L.circleMarker(getMarkerCoords(closest), {
                         ...closest.options,
                         fillOpacity: 1,
                         fillColor: '#38f',
@@ -862,8 +890,8 @@ export function drawRecordings(recordings, lastTimestamp) {
 
                     nearbyMarker.addTo(recordingGroup);
 
-                    if (closest in userMarkers) {
-                        const userDot = new L.circleMarker(closest.getLatLng(), {
+                    if (userMarkers.includes(closest)) {
+                        const userDot = new L.circleMarker(getMarkerCoords(closest), {
                             stroke: false,
                             fill: true,
                             radius: 1,
@@ -876,7 +904,6 @@ export function drawRecordings(recordings, lastTimestamp) {
                     }
 
                     recordingLayers.push({ layer: nearbyMarker, type: 'nearby' });
-                    setTimeout(() => nearbyMarker.bringToFront(), 0);
                 }
             }
         });

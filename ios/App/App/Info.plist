@@ -48,24 +48,24 @@
       <!-- Location permissions -->
     <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
     <string>Hitchmap needs your location to track your hitchhiking journey and show your position on the map, even when the app is in the background.</string>
-    
+
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>Hitchmap needs your location to show your current position on the map and track your journey.</string>
-    
+
     <key>NSLocationAlwaysUsageDescription</key>
     <string>Hitchmap needs continuous location access to track your hitchhiking journey in the background.</string>
-    
+
     <!-- Background modes -->
     <key>UIBackgroundModes</key>
     <array>
         <string>location</string>
         <string>fetch</string>
     </array>
-    
+
     <!-- Privacy - Motion Usage Description (optional, for better accuracy) -->
     <key>NSMotionUsageDescription</key>
     <string>Hitchmap uses motion data to improve location accuracy while tracking your journey.</string>
-    
+
     <!-- Allow loading external content from hitchmap.com -->
     <key>NSAppTransportSecurity</key>
     <dict>
@@ -82,5 +82,10 @@
             </dict>
         </dict>
     </dict>
+    <key>WKAppBoundDomains</key>
+    <array>
+      <string>hitchmap.com</string>
+      <string>localhost</string>
+    </array>
 </dict>
 </plist>

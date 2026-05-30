@@ -15,6 +15,7 @@ module.exports = {
         // Ensures the app respects safe areas on iOS
         allowsLinkPreview: false,
         backgroundColor: '#ffffff', // Prevents transparency behind status bar
+        "limitsNavigationsToAppBoundDomains": true
     },
     android: {
         allowMixedContent: true,

@@ -61,6 +61,8 @@ def experience():
     assert (-90 <= dest_lat <= 90 and -180 <= dest_lon <= 180) or (math.isnan(dest_lat) and math.isnan(dest_lon))
 
     recording = None if data["recording"] == "" else data["recording"]
+    recording_timestamp = None if data["recording-timestamp"] == "" else data["recording-timestamp"]
+
     assert recording is None or recording.startswith("rec_")
 
     for _i in range(10):
@@ -116,6 +118,7 @@ def experience():
                 "ride_datetime": datetime_ride,
                 "user_id": current_user.id if not current_user.is_anonymous else None,
                 "recording": recording,
+                "recording_timestamp": recording_timestamp,
             }
         ],
         index=[pid],

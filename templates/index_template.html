@@ -88,6 +88,7 @@
         <form id=spot-form action="/experience" method=post>
             <input type="hidden" name="coords">
             <input type="hidden" name="recording">
+            <input type="hidden" name="recording-timestamp">
             <label>How do you rate the spot?</label>
             <div class="clear">
                 <div class="rate">
@@ -148,6 +149,7 @@
     <div class="sidebar show-spot spot">
         <h3 id="spot-header"><a target="_blank"></a></h3>
         <div><button class="no-margin-bottom" data-action="review">Review this spot</button></div>
+        <div id='spot-summary'></div>
         <div id="show-spot-recording">
             <h4>Your recording</h4>
             <div id="recording-block">
@@ -156,12 +158,9 @@
                 Time spent: <span id="show-spot-time-spent"></span>
             </div>
         </div>
-        <h4>Summary</h4>
-        <div id='spot-summary'></div>
-        <h4>Reviews</h4>
+        <h4 class="reviews-section-label">Reviews</h4>
         <div id='spot-text'></div>
-        <div id="extra-review-button"><button data-action="review">Review this spot</button></div>
-        <hr>
+        <div id="extra-review-button"><button class="no-margin-bottom" data-action="review">Review this spot</button></div>
     </div>
     <div class="sidebar success">
         <h3>Success!</h3>
@@ -305,9 +304,9 @@
 
     <div id="app-announcement-overlay" class="app-overlay">
         <div class="app-overlay-content">
-            <h3>Hitchmap App: call for testers</h3>
-            <p>The alpha version of the Hitchmap app is available now. It's faster, uses less data, and can be used to record your trips!</p>
-            <a href="/app-announcement.html" class="app-link-btn">Check it out</a>
+            <h3>The Hitchmap app for Android</h3>
+            <p>The Hitchmap app is now available for Android. It's faster, uses less data, and can be used to record your trips!</p>
+            <a href="javascript:;" class="app-link-btn">View the app on the Play Store</a>
 
             <div class="app-overlay-footer">
                 <label>

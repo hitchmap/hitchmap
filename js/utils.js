@@ -11,12 +11,19 @@ export function debounce(fn, delay) {
 
 export const bars = document.querySelectorAll('.sidebar, .topbar');
 
-export function bar(selector) {
+export function bar(selector, soft) {
+    if (soft && $$(selector).classList.contains('visible')) return
+
     bars.forEach(function (el) {
         el.classList.remove('visible')
     })
-    if (selector)
-        $$(selector).classList.add('visible')
+    if (selector) {
+        const el = $$(selector)
+        el.classList.add('visible')
+        if (el.scrollHeight > el.clientHeight) {
+            el.scrollTop = 0
+        }
+    }
 }
 
 export function polygonDistanceToLatLng(polygon, latlng) {
@@ -117,11 +124,24 @@ export function summaryText(row) {
     Ride distance: ${row[5] == null ? '-' : row[5].toFixed(0) + ' km'}`
 }
 
-export function closestMarker(markers, lat, lon) {
+export function closestVisibleMarker(markers, lat, lon) {
     if (!markers.length) return undefined;
     return markers
         .map(marker => {
             const mll = marker.getLatLng();
+            const dx = mll.lng - lon;
+            const dy = mll.lat - lat;
+            return { marker, dist: dx * dx + dy * dy };
+        })
+        .reduce((a, b) => a.dist < b.dist ? a : b)
+        .marker;
+}
+
+export function closestMarker(markers, lat, lon) {
+    if (!markers.length) return undefined;
+    return markers
+        .map(marker => {
+            const mll = getMarkerCoords(marker);
             const dx = mll.lng - lon;
             const dy = mll.lat - lat;
             return { marker, dist: dx * dx + dy * dy };
@@ -340,4 +360,8 @@ export function throttleWithTrailing(fn, delay) {
             }, remaining);
         }
     };
+}
+
+export function getMarkerCoords(marker) {
+    return L.latLng(marker.options._row[0], marker.options._row[1])
 }

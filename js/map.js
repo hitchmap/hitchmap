@@ -1,8 +1,8 @@
 import {addGeocoder} from './geocoder'
 import {exportAsGPX} from './export-gpx';
-import {$$, bar, bars, arrowLine, C, addAsLeafletControl, clearCacheExceptErrorPage} from './utils';
+import {$$, bar, bars, arrowLine, C, addAsLeafletControl, clearCacheExceptErrorPage, getMarkerCoords} from './utils';
 import {clearParams, applyParams, removeFilterButtons} from './filters';
-import {restoreView, storageAvailable, summaryText, closestMarker, findClosestPolyline} from './utils';
+import {restoreView, storageAvailable, summaryText, closestVisibleMarker, closestMarker, findClosestPolyline} from './utils';
 import {fetchCurrentUser, currentUser, firstUserPromise, userMarkerGroup, createUserMarkers} from './user';
 import {pendingGroup, updatePendingMarkers, addPending, getFuturePending} from './pending';
 import {renderReviews} from './render-reviews';
@@ -27,13 +27,13 @@ export var addSpotPoints = [], // Array to store points when adding new spots
 function handleMarkerClick(marker, e) {
     // Prevent interaction if certain UI elements are visible
     if ($$('.topbar.visible')) {
-        map.panTo(marker.getLatLng())
+        map.panTo(getMarkerCoords(marker))
         return
     }
 
     if ($$('.sidebar.spot-form-container.visible')) return
 
-    const point = marker.getLatLng();
+    const point = getMarkerCoords(marker);
 
     window.location.hash = `${point.lat},${point.lng}`
 
@@ -42,25 +42,68 @@ function handleMarkerClick(marker, e) {
 
 // Handle navigation to a marker
 var handleMarkerNavigation = function (marker) {
-    var row = marker.options._row, point = marker.getLatLng()
+    var row = marker.options._row, point = getMarkerCoords(marker)
     active = marker
-
     addSpotPoints = []
-
     renderPoints()
-
     // Update sidebar with spot information
     updateRecordingInfo(marker);
     bar('.sidebar.show-spot')
     // Create location link based on device type (mobile vs desktop)
-    $$('#spot-header a').href = window.ontouchstart ? `geo:${row[0]},${row[1]}` : ` https://www.google.com/maps/place/${row[0]},${row[1]}`
+    $$('#spot-header a').href = window.ontouchstart ? `geo:${row[0]},${row[1]}` : `https://www.google.com/maps/place/${row[0]},${row[1]}`
     $$('#spot-header a').innerText = `${row[0].toFixed(4)}, ${row[1].toFixed(4)} ☍`
 
-    $$('#spot-summary').innerText = summaryText(row)
+    // Build summary object from row data and reviews, mirroring summaryText's access pattern
+    const reviews = marker.options._reviews;
+    const summary = {
+        avgRating: row[2],
+        count: reviews.length,
+        avgWait: row[4],
+        avgDistance: row[5],
+    };
+
+    // Render inline summary HTML (like renderSummary, without the interactive star rating)
+    const el = document.createElement('div');
+    el.className = 'spot-summary';
+
+    const ratingRow = document.createElement('div');
+    ratingRow.className = 'summary-rating-row';
+
+    const starsEl = document.createElement('div');
+    starsEl.className = 'summary-stars';
+    const avg = Math.round(summary.avgRating);
+    for (let s = 1; s <= 5; s++) {
+        const star = document.createElement('span');
+        star.className = 'star ' + (s <= avg ? 'filled' : 'empty');
+        star.textContent = '★';
+        starsEl.appendChild(star);
+    }
+    ratingRow.appendChild(starsEl);
+
+    if (summary.count) {
+        const countEl = document.createElement('span');
+        countEl.className = 'summary-count';
+        countEl.textContent = `${summary.count} review${summary.count !== 1 ? 's' : ''}`;
+        ratingRow.appendChild(countEl);
+    }
+
+    el.appendChild(ratingRow);
+
+    const pills = document.createElement('div');
+    pills.className = 'summary-pills';
+    if (summary.avgWait != null) {
+        pills.innerHTML += `<span class="summary-pill"><i class="ti ti-clock" aria-hidden="true"></i> avg wait <strong>${Math.round(summary.avgWait)} min</strong></span>`;
+    }
+    if (summary.avgDistance != null) {
+        pills.innerHTML += `<span class="summary-pill"><i class="ti ti-road" aria-hidden="true"></i> avg ride <strong>${Math.round(summary.avgDistance)} km</strong></span>`;
+}
+    if (pills.children.length) el.appendChild(pills);
+
+    $$('#spot-summary').replaceChildren(el);
 
     // Handle spot description and additional info
     $$('#spot-text').replaceChildren(renderReviews(marker.options._reviews));
-    $$('#extra-review-button').style.display = row[3].length > 200 ? 'block': 'none';
+    $$('#extra-review-button').style.display = row[3].length > 200 ? 'block' : 'none';
 };
 
 $$(".sidebar.show-spot").addEventListener("click", function (event) {
@@ -313,19 +356,19 @@ refreshPending.onclick = async e => {
     location.reload()
 }
 
-// Recording picker control (visibility governed by body.has-multiple-recordings via CSS)
-addAsLeafletControl('#recording-picker-control', 'bottomleft');
-
-// GPS and geocoder remain in the same sequence
-// L.control.locate().addTo(map);
-addGeocoder(map);
-
 if (window.Capacitor) {
     addAsLeafletControl('#location-tracking-control', 'bottomleft');
     // addAsLeafletControl('#flex-break-4');
     // let bugReport = addAsLeafletControl('#bugreport-control');
     // bugReport.onclick = () => alert('Please email info@hitchmap.com with your bugs!')
 }
+
+// Recording picker control (visibility governed by body.has-multiple-recordings via CSS)
+addAsLeafletControl('#recording-picker-control', 'bottomleft');
+
+// GPS and geocoder remain in the same sequence
+// L.control.locate().addTo(map);
+addGeocoder(map);
 
 // Optional layout break
 addAsLeafletControl('#flex-break-3');
@@ -372,7 +415,7 @@ var addSpotStep = function (e) {
             : rec.stops[rec.activeIndex + 1])
         if (snapStop) snapCandidates.push(L.latLng(snapStop.latitude, snapStop.longitude))
 
-        const closest = closestMarker(allMarkers, center.lat, center.lng)
+        const closest = closestVisibleMarker(allMarkers, center.lat, center.lng)
         if (closest) snapCandidates.push(closest.getLatLng())
 
         const centerPx = map.latLngToContainerPoint(center)
@@ -395,7 +438,7 @@ var addSpotStep = function (e) {
     }
 
     if (action === 'review') {
-        addSpotPoints.push(active.getLatLng())
+        addSpotPoints.push(getMarkerCoords(active))
         active = null
     }
 
@@ -486,8 +529,9 @@ function initializeSpotForm(points, destinationProvided) {
         if (pf.timestamp) {
             const rideTime = new Date(new Date(pf.timestamp).getTime() + pf.seconds_spent * 1000);
             const localISO = new Date(rideTime.getTime() - rideTime.getTimezoneOffset() * 60000)
-                .toISOString().slice(0, 16);
+                  .toISOString().slice(0, 16);
             $$('#datetime_ride').value = localISO;
+            $$('input[name=recording-timestamp]').value = +rideTime;
             // Open the details section since datetime is prefilled
             const details = $$("#extended_info");
             details.open = true;
@@ -537,7 +581,7 @@ map.on('click', e => {
     if ((!document.body.classList.contains('zoomed-out') || $$('body.has-specific-filter')) && isTap) {
         // Check existing spots matching recording stops for proximity first
         let recordingCircles = recordingLayers.filter(l => l.type === 'nearby').map(l => l.layer)
-        let closestCircle = closestMarker(recordingCircles, e.latlng.lat, e.latlng.lng)
+        let closestCircle = closestVisibleMarker(recordingCircles, e.latlng.lat, e.latlng.lng)
         if (closestCircle && map.latLngToLayerPoint(closestCircle.getLatLng()).distanceTo(layerPoint) < 20) {
             opened = true
             closestCircle.fire('click', e)
@@ -546,7 +590,7 @@ map.on('click', e => {
         if (!opened) {
             // then check recording stops without existing spots
             let recordingCircles = recordingLayers.filter(l => l.type === 'stop').map(l => l.layer)
-            let closestCircle = closestMarker(recordingCircles, e.latlng.lat, e.latlng.lng)
+            let closestCircle = closestVisibleMarker(recordingCircles, e.latlng.lat, e.latlng.lng)
             if (closestCircle && map.latLngToLayerPoint(closestCircle.getLatLng()).distanceTo(layerPoint) < 20) {
                 opened = true
                 closestCircle.fire('click', e)
@@ -556,7 +600,7 @@ map.on('click', e => {
         if (!opened) {
             // then check all markers
             let markers = allMarkers
-            var closest = closestMarker(markers, e.latlng.lat, e.latlng.lng)
+            var closest = closestVisibleMarker(markers, e.latlng.lat, e.latlng.lng)
             if (closest && map.latLngToLayerPoint(closest.getLatLng()).distanceTo(layerPoint) < 20) {
                 opened = true
                 handleMarkerClick(closest, e)
@@ -632,7 +676,7 @@ function renderPoints() {
     document.body.classList.toggle('has-points', addSpotPoints.length);
 
     if (active) {
-        const latlng = active.getLatLng();
+        const latlng = getMarkerCoords(active);
         const haloOpts = {
             color: 'red',
             weight: 2,
@@ -724,7 +768,7 @@ function navigate() {
     }
     else if (args[0] == 'filters') {
         clear()
-        bar('.sidebar.filters')
+        bar('.sidebar.filters', true)
     }
     else if (args.length == 2 && !isNaN(args[0])) {
         let lat = +args[0], lon = +args[1]
@@ -740,7 +784,7 @@ function navigate() {
 
         handleMarkerNavigation(m)
         if (map.getZoom() < 3)
-            map.setView(m.getLatLng(), 16)
+            map.setView(getMarkerCoords(m), 16)
         return
     }
     else if (args[0] == 'success') {

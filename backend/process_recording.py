@@ -241,10 +241,11 @@ def merge_soliciting_events(
     return periods.reset_index(drop=True)
 
 
-def find_nearby_points(periods_df, db_con):
+def find_nearby_points(periods_df, db_con, recording_id):
     RADIUS_M = 10.0
     PAD_M = 11.1
     PAD_DEGREES = 0.0001
+    TIMESTAMP_TOLERANCE_MS = 5 * 60 * 1000  # 5 minutes in milliseconds
 
     def point_near_hull(pt, hull):
         if hull.contains(pt):
@@ -259,6 +260,20 @@ def find_nearby_points(periods_df, db_con):
             min_lat, max_lat, min_lon, max_lon = lat, lat, lon, lon
         return min_lat - PAD_DEGREES, max_lat + PAD_DEGREES, min_lon - PAD_DEGREES, max_lon + PAD_DEGREES
 
+    # Pre-fetch all points belonging to this recording in one query.
+    recording_points = pd.read_sql(
+        "SELECT id, lat, lon, recording_timestamp FROM points"
+        " WHERE NOT banned AND revised_by IS NULL"
+        " AND recording = :recording_id",
+        db_con,
+        params=dict(recording_id=recording_id),
+    )
+    recording_points["short_id"] = recording_points["id"].apply(
+        lambda x: base64.urlsafe_b64encode(x.to_bytes(8, "big")).decode("ascii")
+    )
+
+    print(recording_points)
+
     periods_df = periods_df.copy()
     periods_df["nearby_point"] = None
     for pos, (_, row) in enumerate(periods_df.iterrows()):
@@ -266,26 +281,46 @@ def find_nearby_points(periods_df, db_con):
             continue
         lat, lon = row["latitude"], row["longitude"]
         hull = row.get("convex_hull")
+        period_ts_max = row["timestamp"] + row["seconds_spent"] * 1000
         min_lat, max_lat, min_lon, max_lon = bbox(lat, lon, hull)
-        candidates = pd.read_sql(
-            "SELECT id, lat, lon FROM points"
-            " WHERE NOT banned AND revised_by IS NULL"
-            " AND lat BETWEEN :min_lat AND :max_lat AND lon BETWEEN :min_lon AND :max_lon",
-            db_con,
-            params=dict(min_lat=min_lat, max_lat=max_lat, min_lon=min_lon, max_lon=max_lon),
-        )
-        # don't touch this
-        candidates["short_id"] = candidates["id"].apply(lambda x: base64.urlsafe_b64encode(x.to_bytes(8, "big")).decode("ascii"))
+
         best_short_id = None
         best_dist = float("inf")
-        for _, c in candidates.iterrows():
-            pt = Point(c.lon, c.lat)
-            hit = point_near_hull(pt, hull) if hull is not None else haversine_m(c.lat, c.lon, lat, lon) <= RADIUS_M
-            if hit:
-                dist = haversine_m(c.lat, c.lon, lat, lon)
-                if dist < best_dist:
-                    best_dist = dist
-                    best_short_id = c.short_id
+
+        # --- Priority pass: any recording point within 5 minutes of ts_max ---
+        time_match = recording_points[(recording_points["recording_timestamp"] - period_ts_max).abs() <= TIMESTAMP_TOLERANCE_MS]
+        if not time_match.empty:
+            best_short_id = time_match.iloc[0]["short_id"]
+
+        # --- Fallback pass: general spatial candidates (excluding same-recording points) ---
+        if best_short_id is None:
+            candidates = pd.read_sql(
+                "SELECT id, lat, lon FROM points"
+                " WHERE NOT banned AND revised_by IS NULL"
+                " AND recording IS DISTINCT FROM :recording_id"
+                " AND lat BETWEEN :min_lat AND :max_lat AND lon BETWEEN :min_lon AND :max_lon",
+                db_con,
+                params=dict(
+                    recording_id=recording_id,
+                    min_lat=min_lat,
+                    max_lat=max_lat,
+                    min_lon=min_lon,
+                    max_lon=max_lon,
+                ),
+            )
+            # don't touch this
+            candidates["short_id"] = candidates["id"].apply(
+                lambda x: base64.urlsafe_b64encode(x.to_bytes(8, "big")).decode("ascii")
+            )
+            for _, c in candidates.iterrows():
+                pt = Point(c.lon, c.lat)
+                hit = point_near_hull(pt, hull) if hull is not None else haversine_m(c.lat, c.lon, lat, lon) <= RADIUS_M
+                if hit:
+                    dist = haversine_m(c.lat, c.lon, lat, lon)
+                    if dist < best_dist:
+                        best_dist = dist
+                        best_short_id = c.short_id
+
         periods_df.loc[pos, "nearby_point"] = best_short_id
     return periods_df
 
@@ -293,20 +328,22 @@ def find_nearby_points(periods_df, db_con):
 # -----------------------
 # Process recording
 # -----------------------
-def process_recording(recording_df, db_con=None):
+def process_recording(recording_df):
     """Process a single recording: outlier removal, Kalman filter, slow-point merge."""
+    print("outliers")
 
     # Outlier removal
     recording_df = remove_outliers(recording_df)
 
+    print("kalman")
     # 2D Kalman filter
     recording_df = kalman_smooth_2d(recording_df)
 
+    print("merge")
     # Merge slow points
     recording_df = merge_soliciting_events(recording_df)
 
-    if db_con:
-        recording_df = find_nearby_points(recording_df, db_con)
+    print("done")
 
     del recording_df["convex_hull"]
 

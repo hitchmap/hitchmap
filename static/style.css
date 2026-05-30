@@ -443,20 +443,6 @@ body.filtering .remove-filter {
 body.filtering .filter-button a::after {
     content: '‼️' !important;
 }
-@media only screen and (max-width: 700px) {
-    .topbar {
-        font-size: 1em !important;
-    }
-    .topbar button {
-        font-size: 12px !important;
-    }
-    .sidebar.show-spot {
-        font-size: 13px;
-    }
-    .sidebar.filters {
-        font-size: 14px;
-    }
-}
 .leaflet-control-attribution {
     text-align: right;
 }
@@ -661,20 +647,145 @@ ul.no-style {
 .remove-filter-group:empty {
     display: none;
 }
-.review-comment {
-    white-space: pre-line;
+
+/* ─── Reviews section header ─────────────────────────────────────────── */
+.show-spot h4 {
+    font-weight: bold;
+    font-size: 1.1em !important;
+    margin: 1.2em 0 0.5em;
 }
-.review-meta {
-    margin-top: 1em;
+
+/* ─── Add a review button ────────────────────────────────────────────── */
+.add-review-btn {
+    display: block;
+    width: 100%;
+    text-align: center;
+    border: 1.5px solid #ccc;
+    border-radius: 8px;
+    background: white;
+    padding: 0.55em 0;
+    font-size: 0.95em;
+    font-family: sans-serif;
+    color: #222;
+    cursor: pointer;
+    margin-bottom: 1em;
+    box-sizing: border-box;
+}
+.add-review-btn:hover {
+    background: #f5f5f5;
+}
+
+/* ─── Review cards ───────────────────────────────────────────────────── */
+.reviews-container .review + .review {
+    background: white;
+    border-top: 1px solid #e8e8e8;
+    padding: 0.75em 0;
+    margin: 0.75em 0;
+}
+
+/* Author row: name left, stars right */
+.review-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.1em;
+    flex-wrap: wrap;
+    row-gap: 2px;
+}
+.review-author-name {
+    font-weight: bold;
+}
+.review-author-name a {
+    border-bottom: none !important;
+    text-decoration: none;
+}
+.review-stars {
+    color: #f59e0b;
+    font-size: 0.95em;
+    letter-spacing: 0.05em;
+}
+
+/* Date line */
+.review-date {
+    color: #555;
+    margin-bottom: 0.5em;
     font-style: italic;
 }
-.review-author-datetime {
-    margin-top: 1em;
+
+/* Comment text */
+.review-comment {
+    font-size: 1em;
+    color: #1a1a1a;
+    margin-bottom: 0.6em;
+    white-space: pre-line;
 }
-.toggle-original {
-    font-size: 0.8em;
-    margin-top: 1em;
+
+/* Pills row */
+.review-pills {
+    display: flex;
+    gap: 0.5em;
+    flex-wrap: wrap;
+    margin-top: 0.4em;
 }
+.review-pill-tag {
+    font-size: 0.93em;
+    background: #f3f3f3;
+    border: 1px solid #e5e5e5;
+    border-radius: 99px;
+    padding: 0.18em 0.7em;
+    color: #555;
+}
+
+/* ─── Spot summary / click-to-rate ──────────────────────────────────────── */
+.spot-summary {
+    font-family: Georgia, serif;
+    margin-top: 24px;
+}
+.summary-rating-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding-bottom: 10px;
+}
+.summary-stars {
+    display: flex;
+    gap: 3px;
+    cursor: pointer;
+    user-select: none;
+}
+.summary-stars .star {
+    font-size: 1.5em;
+    line-height: 1;
+}
+.summary-stars .star.filled {
+    color: #f59e0b;
+}
+.summary-stars .star.empty {
+    color: #ddd;
+}
+.summary-count {
+    color: #888;
+}
+.summary-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5em;
+    margin-bottom: 0.6em;
+    justify-content: center;
+}
+.summary-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
+    font-size: 0.93em;
+    padding: 0.18em 0.7em;
+    border-radius: 99px;
+    border: 1px solid #e5e5e5;
+    background: #f3f3f3;
+    color: #555;
+}
+
 #lang-control summary {
     list-style: none;
     cursor: pointer;
@@ -830,4 +941,21 @@ body.recording-marker-is-open #show-spot-recording {
     margin: 0;
     width: auto;
     padding: 4px 12px;
+}
+@media (max-width: 700px) {
+    .topbar {
+        font-size: 1em !important;
+    }
+    .topbar button {
+        font-size: 12px !important;
+    }
+    .sidebar.show-spot {
+        font-size: 14px;
+    }
+    .sidebar.filters {
+        font-size: 14px;
+    }
+    .summary-rating-row {
+        flex-direction: column;
+    }
 }
