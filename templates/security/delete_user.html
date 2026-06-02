@@ -1,0 +1,9 @@
+{% extends "security/base.html" %}
+{% block content %}
+<a class="overlay-close" href="/">&#x2715;</a>
+<h1>Delete Account</h1>
+<p>Are you sure you want to delete your account? This action cannot be undone.</p>
+<form action="{{ url_for('delete_user_post') }}" method="post" name="delete_user_form">
+    <button>Yes, I want to delete my account</button>
+</form>
+{% endblock content %}
