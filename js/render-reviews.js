@@ -79,6 +79,8 @@ export function renderReviews(reviews) {
             const p = document.createElement('span');
             p.className = 'review-pill-tag';
             p.innerHTML = `wait <strong>${review[C.WAIT]} min</strong>`;
+            if (review[C.SIGNAL])
+                p.innerHTML += " " + review[C.SIGNAL]
             pillsRow.appendChild(p);
         }
         if (review[C.RIDE_DISTANCE]) {

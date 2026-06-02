@@ -937,7 +937,7 @@ body.recording-marker-is-open #show-spot-recording {
     padding: 15px;
 }
 
-#close-app-overlay {
+#close-app-overlay, #close-ios-app-overlay {
     margin: 0;
     width: auto;
     padding: 4px 12px;

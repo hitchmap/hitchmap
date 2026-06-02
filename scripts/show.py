@@ -148,6 +148,8 @@ rads = points[["lon", "lat", "dest_lon", "dest_lat"]].values.T
 points["ride_distance"] = haversine_np(*rads)
 points["direction"] = get_bearing(*rads)
 
+points["signal"] = points.signal.replace({"ask": "💬", "ask-sign": "💬+🪧", "sign": "🪧", "thumb": "👍"})
+
 points.loc[(points.ride_distance < 1), "dest_lat"] = None
 points.loc[(points.ride_distance < 1), "dest_lon"] = None
 points.loc[(points.ride_distance < 1), "direction"] = None
@@ -181,7 +183,8 @@ points.loc[has_accurate_wait, "wait_text"] = (
     ", wait: "
     + points.wait[has_accurate_wait].astype(int).astype(str)
     + " min"
-    + (" " + points.signal[has_accurate_wait].replace({"ask": "💬", "ask-sign": "💬+🪧", "sign": "🪧", "thumb": "👍"})).fillna("")
+    + " "
+    + points.signal[has_accurate_wait].fillna("")
 )
 
 
@@ -261,6 +264,7 @@ review_data = points[
         "dest_lon",
         "short_id",
         "is_original",
+        "signal",
     ]
 ].copy()
 

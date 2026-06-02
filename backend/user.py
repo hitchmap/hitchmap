@@ -24,20 +24,16 @@ fsqla.FsModels.set_db_info(db)
 
 
 class MyResetForm(ForgotPasswordForm):
+    hitchhiking_check = StringField("What finger do you use to signal that you're hitchhiking?")
+
     def validate(self, **kwargs):
         if not super().validate():
             return False
 
-        email = self.email.data
-
-        # Check if user wrote a review
-        res = db.session.execute(
-            text("select * from user right join points where email = :email and user.id = points.user_id;"), {"email": email}
-        ).fetchone()
-
-        if not res:
-            self.email.errors.append(
-                "We only support automatically resetting passwords for users who have written reviews before. Send an email to info@hitchmap.com to reset your password, or create a new account."
+        answer = (self.hitchhiking_check.data or "").strip().lower()
+        if "thumb" not in answer:
+            self.hitchhiking_check.errors.append(
+                "Incorrect answer. Hint: it's the finger hitchhikers are known for sticking out!"
             )
             return False
 
